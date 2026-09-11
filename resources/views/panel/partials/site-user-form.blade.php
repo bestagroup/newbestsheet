@@ -1,0 +1,10 @@
+<div class="row g-3">
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}name">نام و نام خانوادگی</label><input required type="text" name="name" id="{{ $prefix }}name" class="form-control"></div>
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}phone">موبایل</label><input type="text" name="phone" id="{{ $prefix }}phone" class="form-control"></div>
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}email">ایمیل</label><input required type="email" name="email" id="{{ $prefix }}email" class="form-control"></div>
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}gender">جنسیت</label><select name="gender" id="{{ $prefix }}gender" class="form-control"><option value="">انتخاب کنید</option><option value="1">مرد</option><option value="2">زن</option></select></div>
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}company_id">شرکت</label><select required name="company_id" id="{{ $prefix }}company_id" class="form-control"><option value="">انتخاب کنید</option>@foreach($companies as $company)<option value="{{ $company->id }}">{{ $company->company_name }}{{ $company->commercial_name ? ' - '.$company->commercial_name : '' }}</option>@endforeach</select></div>
+@if($prefix==='edit_')<div class="col-md-4"><label class="form-label" for="{{ $prefix }}status">وضعیت</label><select required name="status" id="{{ $prefix }}status" class="form-control"><option value="4">فعال</option><option value="0">غیرفعال</option></select></div>@endif
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}password">رمز عبور {{ $prefix==='edit_'?'(اختیاری)':'' }}</label><input @if($prefix!=='edit_') required @endif type="password" name="password" id="{{ $prefix }}password" class="form-control"></div>
+<div class="col-md-4"><label class="form-label" for="{{ $prefix }}password_confirmation">تکرار رمز عبور</label><input @if($prefix!=='edit_') required @endif type="password" name="password_confirmation" id="{{ $prefix }}password_confirmation" class="form-control"></div>
+</div>

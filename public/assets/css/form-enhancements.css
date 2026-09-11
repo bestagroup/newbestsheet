@@ -1,0 +1,21 @@
+/*.select2-container--open {*/
+/*    z-index: 2056;*/
+/*}*/
+
+/*.jdp-container,*/
+/*.jdp-overlay {*/
+/*    font-family: IRANSans, sans-serif;*/
+/*}*/
+
+/*:is(input[data-jdp], input[data-datepicker], input[type="date"], input.flatpickr-input) {*/
+/*    --date-input-value-width: 10ch;*/
+/*    --date-input-control-space: 2.5rem;*/
+/*    width: calc(var(--date-input-value-width) + var(--date-input-control-space)) !important;*/
+/*    min-width: calc(var(--date-input-value-width) + var(--date-input-control-space)) !important;*/
+/*    max-width: 100% !important;*/
+/*    flex: 0 0 calc(var(--date-input-value-width) + var(--date-input-control-space)) !important;*/
+/*}*/
+
+/*input.date-input--datetime {*/
+/*    --date-input-value-width: 16ch;*/
+/*}*/

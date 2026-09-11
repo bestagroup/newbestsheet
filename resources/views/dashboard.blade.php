@@ -1,0 +1,353 @@
+@extends('layouts.base')
+
+@section('title', 'داشبورد شخصی و عملکرد حوزه کاری')
+
+@section('style')
+    <style>
+        .dashboard-shell { --dash-border: rgba(15, 23, 42, .08); --dash-muted: #64748b; }
+        .dashboard-hero {
+            background: linear-gradient(135deg, #172554 0%, #1d4ed8 55%, #0ea5e9 100%);
+            border-radius: 22px;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        .dashboard-hero::after {
+            background: rgba(255, 255, 255, .08);
+            border-radius: 50%;
+            content: '';
+            height: 240px;
+            left: -70px;
+            position: absolute;
+            top: -100px;
+            width: 240px;
+        }
+        .section-heading { display: flex; align-items: center; gap: 12px; }
+        .section-number {
+            align-items: center;
+            background: #e0e7ff;
+            border-radius: 12px;
+            color: #4338ca;
+            display: inline-flex;
+            font-size: 1rem;
+            font-weight: 800;
+            height: 42px;
+            justify-content: center;
+            width: 42px;
+        }
+        .dashboard-card { border: 1px solid var(--dash-border); border-radius: 18px; box-shadow: 0 10px 28px rgba(15, 23, 42, .05); }
+        .profile-avatar {
+            align-items: center;
+            background: linear-gradient(145deg, #4f46e5, #0ea5e9);
+            border-radius: 18px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 1.45rem;
+            font-weight: 800;
+            height: 72px;
+            justify-content: center;
+            width: 72px;
+        }
+        .identity-row { border-bottom: 1px dashed var(--dash-border); padding: 10px 0; }
+        .identity-row:last-child { border-bottom: 0; }
+        .meeting-item, .activity-item, .domain-item, .assignment-item { border-bottom: 1px solid var(--dash-border); padding: 13px 0; }
+        .meeting-item:last-child, .activity-item:last-child, .domain-item:last-child, .assignment-item:last-child { border-bottom: 0; }
+        .meeting-date {
+            background: #eff6ff;
+            border-radius: 12px;
+            color: #1d4ed8;
+            flex: 0 0 118px;
+            font-size: .78rem;
+            padding: 8px;
+            text-align: center;
+        }
+        .metric-card {
+            border: 1px solid var(--dash-border);
+            border-radius: 16px;
+            height: 100%;
+            padding: 16px;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .metric-card:hover { box-shadow: 0 12px 24px rgba(15, 23, 42, .08); transform: translateY(-2px); }
+        .metric-icon, .domain-icon, .timeline-icon {
+            align-items: center;
+            border-radius: 13px;
+            display: inline-flex;
+            flex: 0 0 auto;
+            height: 44px;
+            justify-content: center;
+            width: 44px;
+        }
+        .tone-primary { background: #eef2ff; color: #4f46e5; }
+        .tone-success { background: #ecfdf5; color: #059669; }
+        .tone-info { background: #eff6ff; color: #0284c7; }
+        .tone-warning { background: #fff7ed; color: #ea580c; }
+        .tone-danger { background: #fff1f2; color: #e11d48; }
+        .tone-secondary { background: #f1f5f9; color: #64748b; }
+        .metric-value { color: #0f172a; font-size: 1.32rem; font-weight: 800; line-height: 1.4; }
+        .metric-hint, .dashboard-muted { color: var(--dash-muted); font-size: .82rem; }
+        .domain-panel { border: 1px solid var(--dash-border); border-radius: 20px; overflow: hidden; }
+        .domain-panel-header { background: linear-gradient(180deg, rgba(248, 250, 252, .95), #fff); border-bottom: 1px solid var(--dash-border); padding: 18px 20px; }
+        .chart-wrap { height: 285px; position: relative; }
+        .empty-state { color: var(--dash-muted); padding: 28px 12px; text-align: center; }
+        .alert-work { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; }
+        [data-theme="dark"] .dashboard-shell { --dash-border: rgba(148, 163, 184, .18); --dash-muted: #94a3b8; }
+        [data-theme="dark"] .dashboard-card, [data-theme="dark"] .domain-panel, [data-theme="dark"] .domain-panel-header { background: #111827; }
+        [data-theme="dark"] .metric-value { color: #f8fafc; }
+        @media (max-width: 767.98px) {
+            .dashboard-hero { border-radius: 16px; }
+            .meeting-date { flex-basis: 100px; }
+            .chart-wrap { height: 230px; }
+        }
+    </style>
+@endsection
+
+@section('content')
+    @php
+        $initials = collect(preg_split('/\s+/u', trim($dashboardProfile['name'] ?? 'کاربر')))
+            ->filter()
+            ->take(2)
+            ->map(fn($part) => mb_substr($part, 0, 1))
+            ->implode('');
+    @endphp
+
+    <div class="dashboard-shell">
+        <section class="dashboard-hero p-4 p-lg-5 mb-4">
+            <div class="position-relative" style="z-index:1">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="small opacity-75 mb-2">داشبورد شخصی و حوزه کاری</div>
+                        <h3 class="text-white mb-2">{{ $dashboardProfile['name'] }}، خوش آمدید</h3>
+                        <p class="mb-0 opacity-75">جلسات، وظایف و گزارش‌های این صفحه دقیقاً براساس نقش و دسترسی‌های شما نمایش داده می‌شود.</p>
+                    </div>
+                    <div class="text-start">
+                        <div class="small opacity-75">آخرین به‌روزرسانی</div>
+                        <strong>{{ $generatedAt }}</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5">
+            <div class="section-heading mb-3">
+                <span class="section-number">۱</span>
+                <div><h5 class="mb-1">اطلاعات شخصی و جلسات من</h5><div class="dashboard-muted">مشخصات هویتی، نقش سازمانی و برنامه جلسات پیش‌رو</div></div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-xl-5">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="profile-avatar">{{ $initials ?: 'ک' }}</span>
+                                <div class="min-w-0">
+                                    <h5 class="mb-1">{{ $dashboardProfile['name'] }}</h5>
+                                    <div class="dashboard-muted">{{ $dashboardProfile['job_title'] ?: 'عنوان شغلی ثبت نشده' }}</div>
+                                    <div class="d-flex flex-wrap gap-1 mt-2">
+                                        @forelse($dashboardProfile['roles'] as $role)
+                                            <span class="badge bg-label-primary">{{ $role }}</span>
+                                        @empty
+                                            <span class="badge bg-label-secondary">بدون نقش سازمانی</span>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="identity-row d-flex justify-content-between gap-3"><span class="dashboard-muted">ایمیل</span><span dir="ltr">{{ $dashboardProfile['email'] ?: '—' }}</span></div>
+                            <div class="identity-row d-flex justify-content-between gap-3"><span class="dashboard-muted">تلفن همراه</span><span dir="ltr">{{ $dashboardProfile['phone'] ?: '—' }}</span></div>
+                            <div class="identity-row d-flex justify-content-between gap-3"><span class="dashboard-muted">کد ملی</span><span>{{ $dashboardProfile['national_id'] ?: '—' }}</span></div>
+                            <div class="identity-row d-flex justify-content-between gap-3"><span class="dashboard-muted">آخرین ورود</span><span>{{ $dashboardProfile['last_login']?->locale('fa')->diffForHumans() ?: 'ثبت نشده' }}</span></div>
+
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between mb-2"><span class="dashboard-muted">تکمیل اطلاعات هویتی</span><strong>{{ $dashboardProfile['completion'] }}٪</strong></div>
+                                <div class="progress" style="height:8px"><div class="progress-bar" style="width:{{ $dashboardProfile['completion'] }}%"></div></div>
+                            </div>
+                            <a class="btn btn-sm btn-label-primary mt-3" href="{{ route('profile') }}"><i class="mdi mdi-account-edit-outline me-1"></i>تکمیل یا ویرایش پروفایل</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-7">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div><h5 class="mb-1">جلسات و رویدادهای پیش‌رو</h5><div class="dashboard-muted">جلساتی که ایجاد کرده‌اید یا در آن‌ها دعوت شده‌اید</div></div>
+                            @can('can-access', ['calendar', 'view'])<a class="btn btn-sm btn-label-info" href="{{ route('calendar.index') }}">مشاهده تقویم</a>@endcan
+                        </div>
+                        <div class="card-body pt-1" style="max-height: 400px;overflow: auto;">
+                            @forelse($upcomingMeetings as $meeting)
+                                <div class="meeting-item d-flex align-items-center gap-3">
+                                    <div class="meeting-date"><i class="mdi mdi-calendar-clock-outline d-block mb-1"></i>{{ str_replace('-', '/', mb_substr($meeting->start, 0, 16)) }}</div>
+                                    <div class="min-w-0">
+                                        <strong class="d-block text-truncate">{{ $meeting->title }}</strong>
+                                        <span class="dashboard-muted"><i class="mdi mdi-map-marker-outline me-1"></i>{{ $meeting->location ?: 'محل جلسه ثبت نشده' }}</span>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="empty-state"><i class="mdi mdi-calendar-blank-outline mdi-36px d-block mb-2"></i>جلسه‌ای برای روزهای آینده ثبت نشده است.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-heading mb-3">
+                <span class="section-number">۲</span>
+                <div><h5 class="mb-1">عملکرد، وظایف و گزارش حوزه کاری من</h5><div class="dashboard-muted">کارهای انجام‌شده توسط شما و شاخص‌های متناسب با دسترسی‌های سازمانی</div></div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                @foreach($personalCards as $card)
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="metric-card bg-card">
+                            <div class="d-flex justify-content-between gap-3">
+                                <div><div class="metric-value">{{ number_format((float) $card['value']) }}</div><strong class="d-block mt-1">{{ $card['label'] }}</strong><div class="metric-hint mt-1">{{ $card['hint'] }}</div></div>
+                                <span class="metric-icon tone-{{ $card['tone'] }}"><i class="mdi {{ $card['icon'] }} mdi-24px"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-xl-6">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-header"><h5 class="mb-1">{{ $showsTeamActivity ? 'آخرین فعالیت‌های کارشناسان حوزه من' : 'آخرین فعالیت‌های انجام‌شده توسط من' }}</h5><div class="dashboard-muted">{{ $showsTeamActivity ? 'سوابق کارشناسان مرتبط با پرونده‌های قابل مشاهده شما' : 'سوابق موفق ثبت‌شده در سامانه' }}</div></div>
+                        <div class="card-body pt-1" style="max-height: 400px;overflow: auto;">
+                            @forelse($recentActivities as $activity)
+                                <div class="activity-item d-flex gap-3">
+                                    <span class="timeline-icon tone-success"><i class="mdi {{ $activity['icon'] }}"></i></span>
+                                    <div class="min-w-0"><strong>{{ $activity['title'] }}</strong><div class="dashboard-muted mt-1">{{ $activity['description'] }}</div><small class="text-muted d-block mt-1"><i class="mdi mdi-account-outline"></i> {{ $activity['actor_name'] }}@if($activity['actor_role']) — {{ $activity['actor_role'] }}@endif</small><small class="text-muted">{{ $activity['created_at']?->locale('fa')->diffForHumans() }}</small></div>
+                                </div>
+                            @empty
+                                <div class="empty-state"><i class="mdi mdi-history mdi-36px d-block mb-2"></i>هنوز فعالیت کاری مستقیمی برای شما ثبت نشده است.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-6">
+                    <div class="card dashboard-card h-100">
+                        <div class="card-header"><h5 class="mb-1">وظایف و پرونده‌های تخصیص‌یافته به من</h5><div class="dashboard-muted">تخصیص‌های فعال در فرایند سرمایه‌گذاری</div></div>
+                        <div class="card-body pt-1" style="max-height: 400px;overflow: auto;">
+                            @forelse($myAssignments as $assignment)
+                                <div class="assignment-item d-flex justify-content-between align-items-center gap-3">
+                                    <div class="min-w-0"><strong class="d-block text-truncate">{{ $assignment->project?->title ?: 'پرونده حذف‌شده' }}</strong><span class="dashboard-muted">{{ $assignment->investStep?->title ?: 'مرحله نامشخص' }} — {{ $assignment->role?->title_fa ?: $assignment->role?->title }}</span></div>
+                                    @can('can-access', ['flow', 'view'])
+                                        @if($assignment->project)<a class="btn btn-sm btn-icon btn-label-primary" href="{{ route('flow.show', $assignment->project) }}"><i class="mdi mdi-arrow-left"></i></a>@endif
+                                    @endcan
+                                </div>
+                            @empty
+                                <div class="empty-state"><i class="mdi mdi-clipboard-text-off-outline mdi-36px d-block mb-2"></i>وظیفه فعال مستقیمی به شما تخصیص داده نشده است.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if($operationalAlerts->isNotEmpty())
+                <div class="alert-work p-3 mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2"><i class="mdi mdi-bell-alert-outline text-warning mdi-24px"></i><strong>هشدارها و سررسیدهای کاری من</strong></div>
+                    <div class="row g-2">
+                        @foreach($operationalAlerts->take(6) as $alert)
+                            <div class="col-lg-6"><div class="bg-white rounded-3 p-2 h-100"><strong>{{ $alert['title'] }}</strong><div class="dashboard-muted">{{ $alert['project_title'] }} — {{ $alert['days_remaining'] < 0 ? abs($alert['days_remaining']).' روز معوق' : $alert['days_remaining'].' روز تا سررسید' }}</div></div></div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            @forelse($domainSections as $section)
+                <div class="domain-panel mb-4">
+                    <div class="domain-panel-header">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="domain-icon tone-{{ $section['tone'] }}"><i class="mdi {{ $section['icon'] }} mdi-24px"></i></span>
+                            <div><h5 class="mb-1">{{ $section['title'] }}</h5><div class="dashboard-muted">{{ $section['description'] }}</div></div>
+                        </div>
+                    </div>
+                    <div class="p-3 p-lg-4">
+                        <div class="row g-3 mb-4">
+                            @foreach($section['cards'] as $card)
+                                <div class="col-sm-6 col-xl-{{ $section['cards']->count() > 4 ? '4' : '3' }}">
+                                    @if($card['url'])<a class="text-reset d-block h-100" href="{{ $card['url'] }}">@endif
+                                        <div class="metric-card">
+                                            <div class="d-flex justify-content-between gap-2"><div><div class="metric-value">{{ is_numeric($card['value']) ? number_format((float) $card['value']) : $card['value'] }}</div><strong class="d-block mt-1">{{ $card['label'] }}</strong><div class="metric-hint mt-1">{{ $card['hint'] }}</div></div><span class="metric-icon tone-{{ $card['tone'] }}"><i class="mdi {{ $card['icon'] }} mdi-24px"></i></span></div>
+                                        </div>
+                                    @if($card['url'])</a>@endif
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="row g-4">
+                            <div class="col-xl-7">
+                                <h6 class="mb-3">توزیع آماری حوزه</h6>
+                                @if(collect($section['chart']['data'])->sum() > 0)
+                                    <div class="chart-wrap"><canvas id="domain-chart-{{ $section['key'] }}"></canvas></div>
+                                @else
+                                    <div class="empty-state border rounded-3">برای ترسیم نمودار هنوز داده کافی ثبت نشده است.</div>
+                                @endif
+                            </div>
+                            <div class="col-xl-5">
+                                <h6 class="mb-3">آخرین موارد حوزه</h6>
+                                @forelse($section['items'] as $item)
+                                    @if($item['url'])<a class="domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div class="domain-item">@endif
+                                        <div class="d-flex justify-content-between gap-2"><div class="min-w-0"><strong class="d-block text-truncate">{{ $item['title'] }}</strong><div class="dashboard-muted text-truncate">{{ $item['subtitle'] }}</div></div><i class="mdi mdi-chevron-left text-muted"></i></div>
+                                        <small class="text-muted">{{ $item['meta'] }}</small>
+                                    @if($item['url'])</a>@else</div>@endif
+                                @empty
+                                    <div class="empty-state border rounded-3">هنوز رکوردی در این حوزه ثبت نشده است.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="card dashboard-card"><div class="empty-state"><i class="mdi mdi-shield-key-outline mdi-36px d-block mb-2"></i>برای نمایش گزارش حوزه کاری، دسترسی مشاهده یکی از صفحات تخصصی باید به نقش شما داده شود.</div></div>
+            @endforelse
+        </section>
+    </div>
+@endsection
+
+@push('scripts')
+    <script src="{{ asset('assets/vendor/libs/chartjs/chartjs.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.Chart) return;
+            const sections = @json($domainSections->mapWithKeys(fn($section) => [$section['key'] => $section['chart']]));
+            const colors = ['#4f46e5', '#0ea5e9', '#10b981', '#f97316', '#e11d48', '#8b5cf6', '#14b8a6', '#f59e0b', '#64748b', '#22c55e', '#3b82f6', '#a855f7'];
+            Chart.defaults.font.family = 'Vazirmatn, IRANSans, sans-serif';
+            Chart.defaults.color = '#64748b';
+
+            Object.entries(sections).forEach(([key, chart]) => {
+                const canvas = document.getElementById(`domain-chart-${key}`);
+                if (!canvas || !chart.data.some(value => Number(value) > 0)) return;
+                new Chart(canvas, {
+                    type: chart.type,
+                    data: {
+                        labels: chart.labels,
+                        datasets: [{
+                            label: 'مقدار',
+                            data: chart.data,
+                            backgroundColor: chart.type === 'doughnut' ? colors : 'rgba(79, 70, 229, .78)',
+                            borderWidth: 0,
+                            borderRadius: chart.type === 'bar' ? 7 : 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {display: chart.type === 'doughnut', position: 'bottom', labels: {usePointStyle: true, boxWidth: 8}},
+                            tooltip: {rtl: true}
+                        },
+                        scales: chart.type === 'bar' ? {
+                            x: {grid: {display: false}, ticks: {maxRotation: 45, minRotation: 0}},
+                            y: {beginAtZero: true, grid: {color: 'rgba(100, 116, 139, .12)'}, ticks: {callback: value => new Intl.NumberFormat('fa-IR', {notation: 'compact'}).format(value)}}
+                        } : undefined,
+                        cutout: chart.type === 'doughnut' ? '64%' : undefined
+                    }
+                });
+            });
+        });
+    </script>
+@endpush

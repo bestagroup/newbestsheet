@@ -1,0 +1,12 @@
+<div class="row g-3">
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}name">نام و نام خانوادگی</label><input required type="text" name="name" id="{{ $prefix }}name" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}phone">شماره موبایل</label><input type="text" name="phone" id="{{ $prefix }}phone" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}email">ایمیل</label><input required type="email" name="email" id="{{ $prefix }}email" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}national_id">کد ملی</label><input type="text" name="national_id" id="{{ $prefix }}national_id" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}typeuser_id">نقش</label><select required name="typeuser_id" id="{{ $prefix }}typeuser_id" class="form-control"><option value="">انتخاب کنید</option>@foreach($roles as $role)<option value="{{ $role->id }}">{{ $role->title_fa }}</option>@endforeach</select></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}birthday">تاریخ تولد</label><input type="text" name="birthday" id="{{ $prefix }}birthday" class="form-control" data-jdp autocomplete="off"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}gender">جنسیت</label><select name="gender" id="{{ $prefix }}gender" class="form-control"><option value="">انتخاب کنید</option><option value="1">مرد</option><option value="2">زن</option></select></div>
+    @if($prefix === 'edit_')<div class="col-md-4"><label class="form-label" for="{{ $prefix }}status">وضعیت</label><select required name="status" id="{{ $prefix }}status" class="form-control"><option value="4">فعال</option><option value="0">غیرفعال</option></select></div>@endif
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}password">رمز عبور {{ $prefix === 'edit_' ? '(اختیاری)' : '' }}</label><input @if($prefix !== 'edit_') required @endif type="password" name="password" id="{{ $prefix }}password" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label" for="{{ $prefix }}password_confirmation">تکرار رمز عبور</label><input @if($prefix !== 'edit_') required @endif type="password" name="password_confirmation" id="{{ $prefix }}password_confirmation" class="form-control"></div>
+</div>
