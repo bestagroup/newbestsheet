@@ -521,6 +521,41 @@
     background: rgba(var(--bs-primary-rgb, 105, 108, 255), .025);
 }
 
+.calendar-workspace .fc .fc-jalaliMonth-view .fc-daygrid-body,
+.calendar-workspace .fc .fc-jalaliMonth-view .fc-scrollgrid-sync-table {
+    width: 100% !important;
+}
+
+.calendar-workspace .fc .fc-jalaliMonth-view .fc-scrollgrid-sync-table {
+    table-layout: fixed;
+}
+
+.calendar-workspace .fc .fc-jalaliMonth-view .fc-daygrid-day {
+    width: 14.285714%;
+}
+
+.calendar-workspace .fc .fc-jalaliMonth-view .fc-daygrid-day-frame {
+    min-height: clamp(5.75rem, 8vw, 7.25rem);
+}
+
+.calendar-workspace .fc .calendar-day--past {
+    background: color-mix(in srgb, var(--bs-secondary-bg, #f1f5f9) 72%, transparent);
+    cursor: default;
+}
+
+.calendar-workspace .fc .calendar-day--past:hover {
+    background: color-mix(in srgb, var(--bs-secondary-bg, #f1f5f9) 72%, transparent);
+}
+
+.calendar-workspace .fc .calendar-day--past .fc-daygrid-day-number {
+    color: var(--calendar-muted);
+    opacity: .42;
+}
+
+.calendar-workspace .fc .calendar-day--past .fc-daygrid-day-events {
+    opacity: 1;
+}
+
 .calendar-workspace .fc .fc-day-today {
     background: rgba(var(--bs-primary-rgb, 105, 108, 255), .055) !important;
     box-shadow: inset 0 0 0 1px rgba(var(--bs-primary-rgb, 105, 108, 255), .16);
@@ -871,6 +906,8 @@
         margin: .15rem;
         font-size: .68rem;
     }
+
+    .calendar-workspace .fc .fc-jalaliMonth-view .fc-daygrid-day-frame { min-height: 5rem; }
 
     .calendar-workspace .fc .fc-event {
         margin-inline: .08rem;

@@ -96,12 +96,11 @@ class ProfileController extends Controller
     public function updateUser(ProfileUserRequest $request): JsonResponse
     {
         $user = $request->user();
-        $this->portal->assertInvestee($user);
         $user->fill($request->validated())->save();
 
         $this->activityLog->record(
-            'investee.user_profile_updated',
-            'اطلاعات حساب نماینده سرمایه‌پذیر به‌روزرسانی شد.',
+            'profile.user_updated',
+            'اطلاعات حساب کاربری به‌روزرسانی شد.',
             (int) $user->getKey()
         );
 

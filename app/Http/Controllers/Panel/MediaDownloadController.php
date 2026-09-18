@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Panel;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Services\InvestmentWorkflowAccessService;
+use App\Services\MediaFileStorageLocator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaDownloadController extends Controller
@@ -15,7 +15,8 @@ class MediaDownloadController extends Controller
     public function __invoke(
         Request $request,
         MediaFile $media,
-        InvestmentWorkflowAccessService $workflowAccess
+        InvestmentWorkflowAccessService $workflowAccess,
+        MediaFileStorageLocator $storageLocator,
     ): StreamedResponse {
         $user = $request->user();
         $project = $media->project;
@@ -27,15 +28,15 @@ class MediaDownloadController extends Controller
         abort_if($media->scan_status === 'infected', 410, 'این فایل به‌دلیل آلودگی امنیتی قرنطینه شده است.');
         abort_if($media->scan_status === 'pending', 423, 'بررسی امنیتی فایل هنوز تکمیل نشده است.');
 
-        $disk = Storage::disk($media->disk ?: 'public');
-        abort_unless($disk->exists($media->file_path), 404);
+        $location = $storageLocator->locate($media);
+        abort_unless($location, 404, 'فایل در فضای ذخیره‌سازی پیدا نشد.');
 
         $inlineMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'audio/mpeg', 'video/mp4'];
         $disposition = $request->boolean('inline') && in_array($media->mime, $inlineMimes, true)
             ? 'inline'
             : 'attachment';
-        $response = $disk->response(
-            $media->file_path,
+        $response = $location['disk']->response(
+            $location['path'],
             $media->original_name ?: $media->name,
             ['Content-Type' => $media->mime ?: 'application/octet-stream'],
             $disposition

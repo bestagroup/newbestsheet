@@ -171,6 +171,13 @@
             return new Date(new JDate(year, month, 1)._date.getTime());
         }
 
+        function jalaliMonthRange(value) {
+            return {
+                start: jalaliMonthStart(value, 0),
+                end: jalaliMonthStart(value, 1)
+            };
+        }
+
         function formatJalaliDate(value, options) {
             const date = toJsDate(value);
             if (!date) return '—';
@@ -432,7 +439,7 @@
 
         function navigate(offset) {
             if (calendar.view.type === 'jalaliMonth' || calendar.view.type === 'jalaliList') {
-                calendar.gotoDate(jalaliMonthStart(calendar.getDate(), offset));
+                calendar.gotoDate(jalaliMonthStart(calendar.view.currentStart || calendar.getDate(), offset));
             } else if (offset < 0) {
                 calendar.prev();
             } else {
@@ -449,16 +456,13 @@
                 jalaliMonth: {
                     type: 'dayGrid',
                     buttonText: 'ماه',
-                    visibleRange: function (currentDate) {
-                        return {start: jalaliMonthStart(currentDate, 0), end: jalaliMonthStart(currentDate, 1)};
-                    }
+                    fixedWeekCount: false,
+                    visibleRange: jalaliMonthRange
                 },
                 jalaliList: {
                     type: 'list',
                     buttonText: 'فهرست',
-                    visibleRange: function (currentDate) {
-                        return {start: jalaliMonthStart(currentDate, 0), end: jalaliMonthStart(currentDate, 1)};
-                    }
+                    visibleRange: jalaliMonthRange
                 }
             },
             events: fetchEvents,
@@ -502,6 +506,14 @@
             dayCellContent: function (arg) {
                 return faDigits(new JDate(arg.date).getDate());
             },
+            dayCellClassNames: function (arg) {
+                return isBeforeToday(arg.date) ? ['calendar-day--past'] : [];
+            },
+            dayCellDidMount: function (arg) {
+                if (!isBeforeToday(arg.date)) return;
+                arg.el.setAttribute('aria-disabled', 'true');
+                arg.el.setAttribute('title', 'این روز گذشته است؛ فقط برنامه‌های ثبت‌شده قابل مشاهده‌اند.');
+            },
             eventClassNames: function (arg) {
                 const label = normalizedLabel(arg.event.extendedProps.calendar);
                 return ['fc-event-' + labelMeta[label].color];
@@ -519,6 +531,7 @@
                 handleCalendarSelection(info);
             },
             dateClick: function (info) {
+                if (isBeforeToday(info.date)) return;
                 window.setTimeout(function () {
                     // FullCalendar normally emits `select` for a click as well. This
                     // fallback keeps single-day clicks reliable without opening the
@@ -535,7 +548,11 @@
             },
             eventClick: function (info) {
                 info.jsEvent.preventDefault();
+                info.jsEvent.stopPropagation();
                 openEvent(info.event);
+            },
+            selectAllow: function (info) {
+                return !isBeforeToday(info.start);
             },
             eventAllow: function (dropInfo) {
                 return !isBeforeToday(dropInfo.start);
@@ -692,7 +709,6 @@
 
             if (isBeforeToday(start)) {
                 calendar.unselect();
-                notify('برای تاریخ‌های گذشته فقط امکان مشاهده برنامه‌ها وجود دارد.', 'info');
                 return;
             }
 
@@ -791,7 +807,8 @@
             resetForm();
             selectedEvent = event;
             const props = event.extendedProps;
-            const canEdit = Boolean(props.canEdit);
+            const isPastEvent = inclusiveEventEnd(event) < startOfDay(new Date());
+            const canEdit = Boolean(props.canEdit) && !isPastEvent;
 
             els.formTitle.textContent = canEdit ? 'ویرایش برنامه' : 'جزئیات برنامه';
             els.addButton.classList.add('d-none');
@@ -799,6 +816,9 @@
             els.deleteButton.classList.toggle('d-none', !props.canDelete);
             els.ownerPanel.classList.remove('d-none');
             els.creatorName.textContent = props.creatorName || 'سامانه';
+            els.readOnlyNotice.innerHTML = isPastEvent
+                ? '<i class="mdi mdi-calendar-lock-outline me-1"></i>زمان این برنامه گذشته است و جزئیات آن فقط برای مشاهده نمایش داده می‌شود.'
+                : '<i class="mdi mdi-eye-outline me-1"></i>این برنامه به شما تخصیص داده شده است و فقط ایجادکننده می‌تواند آن را ویرایش کند.';
 
             const sync = syncStatusMeta(props.googleSyncStatus);
             els.syncStatus.textContent = sync[0];

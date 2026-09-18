@@ -89,6 +89,19 @@
         .domain-panel { border: 1px solid var(--dash-border); border-radius: 20px; overflow: hidden; }
         .domain-panel-header { background: linear-gradient(180deg, rgba(248, 250, 252, .95), #fff); border-bottom: 1px solid var(--dash-border); padding: 18px 20px; }
         .chart-wrap { height: 285px; position: relative; }
+        .domain-items-toolbar { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; margin-bottom: 12px; }
+        .domain-items-toolbar h6 { margin-bottom: 3px; }
+        .domain-items-search { flex: 0 1 230px; }
+        .domain-items-search .input-group { border: 1px solid var(--dash-border); border-radius: 12px; overflow: hidden; }
+        .domain-items-search .input-group-text, .domain-items-search .form-control { background: transparent; border: 0; }
+        .domain-items-search .form-control:focus { box-shadow: none; }
+        .domain-items-scroll { max-height: 330px; overflow-y: auto; padding-inline-end: 5px; scrollbar-width: thin; }
+        .domain-item { border-radius: 12px; padding: 12px !important; transition: background-color .15s ease; }
+        .domain-item:hover { background: rgba(79, 70, 229, .045); }
+        .domain-item__icon { align-items: center; border-radius: 10px; display: inline-flex; flex: 0 0 36px; height: 36px; justify-content: center; width: 36px; }
+        .domain-item__kind { font-size: .68rem; font-weight: 700; }
+        .domain-item__time { white-space: nowrap; }
+        .domain-items-empty[hidden] { display: none !important; }
         .empty-state { color: var(--dash-muted); padding: 28px 12px; text-align: center; }
         .alert-work { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 14px; }
         [data-theme="dark"] .dashboard-shell { --dash-border: rgba(148, 163, 184, .18); --dash-muted: #94a3b8; }
@@ -98,6 +111,8 @@
             .dashboard-hero { border-radius: 16px; }
             .meeting-date { flex-basis: 100px; }
             .chart-wrap { height: 230px; }
+            .domain-items-toolbar { flex-direction: column; }
+            .domain-items-search { flex-basis: auto; width: 100%; }
         }
     </style>
 @endsection
@@ -288,15 +303,44 @@
                                 @endif
                             </div>
                             <div class="col-xl-5">
-                                <h6 class="mb-3">آخرین موارد حوزه</h6>
-                                @forelse($section['items'] as $item)
-                                    @if($item['url'])<a class="domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div class="domain-item">@endif
-                                        <div class="d-flex justify-content-between gap-2"><div class="min-w-0"><strong class="d-block text-truncate">{{ $item['title'] }}</strong><div class="dashboard-muted text-truncate">{{ $item['subtitle'] }}</div></div><i class="mdi mdi-chevron-left text-muted"></i></div>
-                                        <small class="text-muted">{{ $item['meta'] }}</small>
-                                    @if($item['url'])</a>@else</div>@endif
-                                @empty
-                                    <div class="empty-state border rounded-3">هنوز رکوردی در این حوزه ثبت نشده است.</div>
-                                @endforelse
+                                <div class="domain-items-toolbar">
+                                    <div>
+                                        <h6>{{ $section['itemsTitle'] }}</h6>
+                                        <div class="dashboard-muted">{{ $section['itemsDescription'] }} ({{ number_format($section['items']->count()) }} مورد)</div>
+                                    </div>
+                                    @if($section['items']->count() > 1)
+                                        <label class="domain-items-search" aria-label="جست‌وجو در {{ $section['itemsTitle'] }}">
+                                            <span class="input-group input-group-sm">
+                                                <span class="input-group-text"><i class="mdi mdi-magnify"></i></span>
+                                                <input type="search" class="form-control js-domain-search" data-domain="{{ $section['key'] }}" placeholder="{{ $section['searchPlaceholder'] }}" autocomplete="off">
+                                            </span>
+                                        </label>
+                                    @endif
+                                </div>
+                                <div class="domain-items-scroll" data-domain-list="{{ $section['key'] }}">
+                                    @forelse($section['items'] as $item)
+                                        @if($item['url'])<a class="domain-item js-domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div class="domain-item js-domain-item">@endif
+                                            <div class="d-flex align-items-start gap-2">
+                                                <span class="domain-item__icon tone-{{ $item['tone'] ?? $section['tone'] }}"><i class="mdi {{ $item['icon'] ?? $section['icon'] }}"></i></span>
+                                                <span class="min-w-0 flex-grow-1">
+                                                    <span class="d-flex align-items-center justify-content-between gap-2">
+                                                        <strong class="d-block text-truncate">{{ $item['title'] }}</strong>
+                                                        <span class="badge bg-label-{{ $item['tone'] ?? $section['tone'] }} domain-item__kind">{{ $item['kind'] ?? 'مورد' }}</span>
+                                                    </span>
+                                                    <span class="dashboard-muted d-block text-truncate">{{ $item['subtitle'] }}</span>
+                                                    <span class="d-flex flex-wrap justify-content-between gap-1 mt-1">
+                                                        <small class="text-muted">{{ $item['meta'] }}</small>
+                                                        @if($item['created_at'] ?? null)<small class="text-muted domain-item__time">{{ $item['created_at']->locale('fa')->diffForHumans() }}</small>@endif
+                                                    </span>
+                                                </span>
+                                                @if($item['url'])<i class="mdi mdi-chevron-left text-muted mt-2"></i>@endif
+                                            </div>
+                                        @if($item['url'])</a>@else</div>@endif
+                                    @empty
+                                        <div class="empty-state border rounded-3">هنوز رکوردی در این حوزه ثبت نشده است.</div>
+                                    @endforelse
+                                    <div class="empty-state domain-items-empty border rounded-3" data-domain-empty="{{ $section['key'] }}" hidden>موردی مطابق عبارت جست‌وجو پیدا نشد.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -312,6 +356,24 @@
     <script src="{{ asset('assets/vendor/libs/chartjs/chartjs.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.js-domain-search').forEach(input => {
+                const list = document.querySelector(`[data-domain-list="${input.dataset.domain}"]`);
+                if (!list) return;
+                const items = Array.from(list.querySelectorAll('.js-domain-item'));
+                const empty = list.querySelector(`[data-domain-empty="${input.dataset.domain}"]`);
+
+                input.addEventListener('input', () => {
+                    const query = input.value.trim().toLocaleLowerCase('fa-IR');
+                    let visibleCount = 0;
+                    items.forEach(item => {
+                        const matches = query === '' || item.textContent.toLocaleLowerCase('fa-IR').includes(query);
+                        item.hidden = !matches;
+                        if (matches) visibleCount++;
+                    });
+                    if (empty) empty.hidden = visibleCount !== 0;
+                });
+            });
+
             if (!window.Chart) return;
             const sections = @json($domainSections->mapWithKeys(fn($section) => [$section['key'] => $section['chart']]));
             const colors = ['#4f46e5', '#0ea5e9', '#10b981', '#f97316', '#e11d48', '#8b5cf6', '#14b8a6', '#f59e0b', '#64748b', '#22c55e', '#3b82f6', '#a855f7'];

@@ -27,6 +27,8 @@ use Morilog\Jalali\Jalalian;
 
 class DashboardMetricsService
 {
+    private const DOMAIN_ITEMS_LIMIT = 30;
+
     public function __construct(
         private readonly InvestmentReminderService $reminders,
         private readonly OperationalAnalyticsService $operationalAnalytics,
@@ -227,12 +229,15 @@ class DashboardMetricsService
             $cards->push($this->card('کارکنان فعال', Employee::query()->where('status', 'active')->count(), 'در حال همکاری', 'mdi-account-check-outline', 'success', route('employees.index')));
             $cards->push($this->card('مدارک پرسنلی', EmployeeDocument::query()->count(), 'اسناد بارگذاری‌شده', 'mdi-file-account-outline', 'info', route('employees.index')));
 
-            $items = $items->merge(Employee::query()->latest('id')->limit(4)->get()->map(fn (Employee $employee): array => [
+            $items = $items->merge(Employee::query()->latest('id')->limit(15)->get()->map(fn (Employee $employee): array => [
                 'title' => $employee->full_name,
                 'subtitle' => collect([$employee->job_title, $employee->department])->filter()->implode(' — ') ?: 'پرونده پرسنلی',
                 'meta' => 'کد پرسنلی: '.$employee->personnel_code,
                 'created_at' => $employee->created_at,
                 'url' => route('employees.index', ['q' => $employee->personnel_code]),
+                'kind' => 'پرسنل',
+                'icon' => 'mdi-account-outline',
+                'tone' => 'primary',
             ]));
         }
 
@@ -244,12 +249,15 @@ class DashboardMetricsService
             $cards->push($this->card('ارزش اموال', $this->money($assetValue), 'ارزش خرید اقلام فعال', 'mdi-cash-multiple', 'success', route('assets.index')));
             $cards->push($this->card('اقلام تحویل‌شده', AdministrativeAsset::query()->where('status', 'assigned')->sum('quantity'), 'تحویل کارکنان', 'mdi-account-arrow-left-outline', 'info', route('assets.index')));
 
-            $items = $items->merge(AdministrativeAsset::query()->latest('id')->limit(4)->get()->map(fn (AdministrativeAsset $asset): array => [
+            $items = $items->merge(AdministrativeAsset::query()->latest('id')->limit(15)->get()->map(fn (AdministrativeAsset $asset): array => [
                 'title' => $asset->name,
                 'subtitle' => $asset->category ?: 'کالا/مال اداری',
                 'meta' => 'کد مال: '.$asset->asset_code.' — تعداد: '.number_format($asset->quantity),
                 'created_at' => $asset->created_at,
                 'url' => route('assets.index', ['q' => $asset->asset_code]),
+                'kind' => 'اموال',
+                'icon' => 'mdi-package-variant-closed',
+                'tone' => 'warning',
             ]));
         }
 
@@ -278,7 +286,7 @@ class DashboardMetricsService
             'mdi-briefcase-account-outline',
             'primary',
             $cards,
-            $items->sortByDesc('created_at')->take(6)->values(),
+            $items->sortByDesc('created_at')->take(self::DOMAIN_ITEMS_LIMIT)->values(),
             $chart
         );
     }
@@ -295,12 +303,15 @@ class DashboardMetricsService
             $cards->push($this->card('مجموع پرداخت سرمایه‌گذاری', $this->money((float) (clone $paymentQuery)->sum('amount')), 'پرداخت‌های ثبت‌شده برای پورتفو', 'mdi-cash-check', 'success', route('finance.index')));
             $cards->push($this->card('تعداد پرداخت‌ها', (clone $paymentQuery)->count(), 'اسناد پرداخت سرمایه‌گذاری', 'mdi-receipt-text-outline', 'info', route('finance.index')));
 
-            $items = $items->merge((clone $paymentQuery)->with('project:id,title')->latest('id')->limit(6)->get()->map(fn (Finance $finance): array => [
+            $items = $items->merge((clone $paymentQuery)->with('project:id,title')->latest('id')->limit(15)->get()->map(fn (Finance $finance): array => [
                 'title' => $finance->project?->title ?: 'پرداخت سرمایه‌گذاری',
                 'subtitle' => $this->money((float) $finance->amount),
                 'meta' => $finance->date ?: 'تاریخ ثبت نشده',
                 'created_at' => $finance->created_at,
                 'url' => route('finance.index'),
+                'kind' => 'پرداخت',
+                'icon' => 'mdi-cash-check',
+                'tone' => 'success',
             ]));
         }
 
@@ -309,15 +320,22 @@ class DashboardMetricsService
             $cards->push($this->card('صورت‌های مالی ثبت‌شده', (clone $statementQuery)->count(), 'دوره‌های مالی شرکت‌های پورتفو', 'mdi-file-chart-outline', 'primary', route('financialstatement.index')));
             $cards->push($this->card('شرکت‌های دارای صورت مالی', (clone $statementQuery)->distinct()->count('project_id'), 'پوشش اطلاعات مالی پورتفو', 'mdi-domain', 'warning', route('financialstatement.index')));
 
-            if ($items->isEmpty()) {
-                $items = (clone $statementQuery)->with('project:id,title')->orderByDesc('year')->orderByDesc('month')->limit(6)->get()->map(fn (Financial_statement $statement): array => [
+            $items = $items->merge((clone $statementQuery)
+                ->with('project:id,title')
+                ->orderByDesc('year')
+                ->orderByDesc('month')
+                ->limit(15)
+                ->get()
+                ->map(fn (Financial_statement $statement): array => [
                     'title' => $statement->project?->title ?: 'صورت مالی',
                     'subtitle' => 'دوره '.$statement->year.'/'.str_pad((string) $statement->month, 2, '0', STR_PAD_LEFT),
                     'meta' => 'سود خالص: '.$this->money((float) $statement->net_profit),
                     'created_at' => $statement->created_at,
                     'url' => route('financialstatement.index'),
-                ]);
-            }
+                    'kind' => 'صورت مالی',
+                    'icon' => 'mdi-file-chart-outline',
+                    'tone' => 'info',
+                ]));
         }
 
         $monthly = array_fill(1, 12, 0.0);
@@ -338,7 +356,7 @@ class DashboardMetricsService
             'mdi-calculator-variant-outline',
             'success',
             $cards,
-            $items->sortByDesc('created_at')->take(6)->values(),
+            $items->sortByDesc('created_at')->take(self::DOMAIN_ITEMS_LIMIT)->values(),
             $this->chart('bar', $this->monthLabels(), array_values($monthly))
         );
     }
@@ -370,7 +388,7 @@ class DashboardMetricsService
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
-            ->limit(6)
+            ->limit(self::DOMAIN_ITEMS_LIMIT)
             ->get()
             ->map(fn (Project $project): array => [
                 'title' => $project->title,
@@ -378,6 +396,9 @@ class DashboardMetricsService
                 'meta' => ($project->currentStep?->title ?: 'مرحله نامشخص').' — پیشرفت '.number_format((float) $project->progress_percentage, 0).'٪',
                 'created_at' => $project->updated_at,
                 'url' => $this->can($viewer, 'flow') ? route('flow.show', $project) : route('project.index'),
+                'kind' => 'طرح',
+                'icon' => 'mdi-lightbulb-on-outline',
+                'tone' => 'info',
             ]);
 
         return $this->section(
@@ -416,7 +437,7 @@ class DashboardMetricsService
             ->withCount(['currentKpis as kpis_count', 'quarterlyPerformanceReports'])
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
-            ->limit(6)
+            ->limit(self::DOMAIN_ITEMS_LIMIT)
             ->get()
             ->map(fn (Project $project): array => [
                 'title' => $project->title,
@@ -424,6 +445,9 @@ class DashboardMetricsService
                 'meta' => number_format($project->kpis_count).' KPI — '.number_format($project->quarterly_performance_reports_count).' گزارش فصلی',
                 'created_at' => $project->updated_at,
                 'url' => $this->can($viewer, 'flow') ? route('flow.show', $project) : null,
+                'kind' => 'پورتفو',
+                'icon' => 'mdi-domain',
+                'tone' => 'warning',
             ]);
 
         return $this->section(
@@ -461,7 +485,7 @@ class DashboardMetricsService
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
-            ->limit(6)
+            ->limit(self::DOMAIN_ITEMS_LIMIT)
             ->get()
             ->map(fn (Project $project): array => [
                 'title' => $project->title,
@@ -469,6 +493,9 @@ class DashboardMetricsService
                 'meta' => ($project->currentStep?->title ?: 'مرحله نامشخص').' — پیشرفت '.number_format((float) $project->progress_percentage, 0).'٪',
                 'created_at' => $project->updated_at,
                 'url' => $this->can($viewer, 'report') ? route('report.index') : null,
+                'kind' => 'پرونده',
+                'icon' => 'mdi-folder-outline',
+                'tone' => 'primary',
             ]);
 
         return $this->section(
@@ -490,7 +517,19 @@ class DashboardMetricsService
 
     private function section(string $key, string $title, string $description, string $icon, string $tone, Collection $cards, Collection $items, array $chart): array
     {
-        return compact('key', 'title', 'description', 'icon', 'tone', 'cards', 'items', 'chart');
+        [$itemsTitle, $itemsDescription, $searchPlaceholder] = match ($key) {
+            'administrative' => ['آخرین پرونده‌های پرسنلی و اموال', 'جدیدترین تغییرات حوزه اداری و پشتیبانی', 'جست‌وجوی نام، کد پرسنلی یا کد مال…'],
+            'finance' => ['آخرین پرداخت‌ها و صورت‌های مالی', 'آخرین گردش اطلاعات مالی شرکت‌های قابل مشاهده', 'جست‌وجوی طرح، مبلغ یا دوره مالی…'],
+            'investment' => ['آخرین طرح‌های به‌روزشده', 'پرونده‌های جاری در فرایند ارزیابی سرمایه‌گذاری', 'جست‌وجوی طرح، شرکت یا مرحله…'],
+            'portfolio' => ['آخرین شرکت‌های پورتفو', 'وضعیت KPI و گزارش عملکرد شرکت‌های پورتفو', 'جست‌وجوی شرکت، KPI یا گزارش…'],
+            'executive' => ['آخرین پرونده‌های سرمایه‌گذاری', 'جدیدترین وضعیت پرونده‌ها در نمای مدیریتی', 'جست‌وجوی طرح، شرکت یا مرحله…'],
+            default => ['آخرین موارد', 'جدیدترین اطلاعات قابل مشاهده', 'جست‌وجو در موارد…'],
+        };
+
+        return compact(
+            'key', 'title', 'description', 'icon', 'tone', 'cards', 'items', 'chart',
+            'itemsTitle', 'itemsDescription', 'searchPlaceholder'
+        );
     }
 
     private function chart(string $type, Collection|array $labels, Collection|array $data): array
