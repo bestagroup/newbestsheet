@@ -69,7 +69,8 @@ class FlowController extends Controller
                     'p.progress_percentage',
                     'p.percentageshare',
                     'p.amount_request_accept',
-                    'p.status',
+                    'p.is_rejected',
+                    'p.reject_step',
                     'p.created_at',
                     DB::raw('(SELECT COALESCE(SUM(f.amount),0) FROM finances f WHERE f.project_id = p.id) as total_payment')
                 );
@@ -90,8 +91,7 @@ class FlowController extends Controller
                 ->addColumn('flow_level', function ($data) {
                     $flow = $data->flow_level;
 
-                    if ($data->status == 'rejected') {
-                        // می‌توانی از FontAwesome یا emoji استفاده کنی
+                    if ($data->reject_step == 1) {
                         $flow .= ' <span style="color:red;">&#9940;</span>'; // علامت عبور ممنوع ❌
                     }
 
