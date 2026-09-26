@@ -9,9 +9,8 @@
                 <div class="app-brand justify-content-center mt-5">
                     <a href="{{ url('/') }}" class="app-brand-link gap-2">
                         <span class="app-brand-logo demo">
-                          <img src="{{ asset('assets/img/sinavclogo.png') }}" alt="توسعه دانش بنیان سینا" width="40">
+                          <img src="{{ asset('assets/img/logo.png') }}" alt="توسعه دانش بنیان سینا" width="40">
                         </span>
-                        <span class="app-brand-text demo text-heading fw-bold">توسعه دانش بنیان سینا</span>
                     </a>
                 </div>
 
