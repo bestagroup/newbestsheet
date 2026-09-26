@@ -6,9 +6,8 @@
         <a class="app-brand-link" href="{{Route('dashboard')}}">
 
             <span class="app-brand-logo demo">
-                  <img src="{{ asset('assets/img/sinavclogo.png') }}" alt="توسعه دانش بنیان سینا" width="27">
+                  <img src="{{ asset('assets/img/logo.png') }}" alt="توسعه دانش بنیان سینا">
             </span>
-            <span class="app-brand-text demo menu-text fw-bold ms-2">SinaVC</span>
         </a>
         <a class="layout-menu-toggle menu-link text-large ms-auto" href="javascript:void(0);">
             <svg fill="none" height="22" viewbox="0 0 22 22" width="22" xmlns="http://www.w3.org/2000/svg">
