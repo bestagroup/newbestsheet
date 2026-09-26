@@ -6,7 +6,7 @@
         <a class="app-brand-link" href="{{Route('dashboard')}}">
 
             <span class="app-brand-logo demo">
-                  <img src="{{ asset('assets/img/logo.png') }}" alt="توسعه دانش بنیان سینا">
+                  <img src="{{ asset('assets/img/logo.png') }}" style=" width: 10%;" alt="توسعه دانش بنیان سینا">
             </span>
         </a>
         <a class="layout-menu-toggle menu-link text-large ms-auto" href="javascript:void(0);">
