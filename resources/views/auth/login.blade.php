@@ -8,8 +8,8 @@
             <div class="card p-2">
                 <div class="app-brand justify-content-center mt-5">
                     <a href="{{ url('/') }}" class="app-brand-link gap-2">
-                        <span class="app-brand-logo demo">
-                          <img src="{{ asset('assets/img/logo.png') }}" alt="توسعه دانش بنیان سینا" width="40">
+                        <span class="app-brand-logo demo" style="width: 100%;">
+                          <img src="{{ asset('assets/img/logo.png') }}" alt="توسعه دانش بنیان سینا" style="width: 45%;text-align: center;margin: 0 auto;">
                         </span>
                     </a>
                 </div>
