@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Panel\MinuteRequest;
+use App\Models\MediaFile;
 use App\Models\Minute;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\InternalNotificationService;
+use App\Services\InvestmentWorkflowAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -26,6 +28,7 @@ class MinuteController extends Controller
             'id' => ['required', 'integer', 'exists:projects,id'],
         ]);
 
+        $this->assertProjectAccess((int) $validated['id']);
         $canEdit = Gate::allows('can-access', ['flow', 'edit']);
 
         $data = Minute::query()
@@ -38,7 +41,7 @@ class MinuteController extends Controller
                     return '';
                 }
 
-                return '<a href="'.asset('storage/'.$minute->file_path).'" target="_blank" rel="noopener">دانلود فایل</a>';
+                return '<a href="'.route('minute.download', $minute->id).'" rel="noopener">دانلود فایل</a>';
             })
             ->addColumn('creator_name', static fn (Minute $minute): string => e($minute->creator?->name ?? '—'))
             ->addColumn('action', static function (Minute $minute) use ($canEdit): string {
@@ -56,6 +59,7 @@ class MinuteController extends Controller
     public function edit(int $id): JsonResponse
     {
         $minute = Minute::query()->findOrFail($id);
+        $this->assertProjectAccess((int) $minute->project_id);
 
         return response()->json($minute->only([
             'id', 'project_id', 'title', 'date', 'type', 'file_path',
@@ -68,6 +72,7 @@ class MinuteController extends Controller
         ActivityLogService $activity
     ): JsonResponse {
         $validated = $request->validated();
+        $this->assertProjectAccess((int) $validated['project_id']);
 
         try {
             $project = Project::query()->findOrFail($validated['project_id']);
@@ -122,7 +127,9 @@ class MinuteController extends Controller
     public function update(MinuteRequest $request, int $id, ActivityLogService $activity): JsonResponse
     {
         $validated = $request->validated();
+        $this->assertProjectAccess((int) $validated['project_id']);
         $minute = Minute::query()->findOrFail($id);
+        $this->assertProjectAccess((int) $minute->project_id);
         $project = Project::query()->findOrFail($validated['project_id']);
 
         abort_unless((int) $minute->project_id === (int) $project->id, 404);
@@ -148,10 +155,27 @@ class MinuteController extends Controller
     public function destroy(int $id, ActivityLogService $activity): JsonResponse
     {
         $minute = Minute::query()->findOrFail($id);
+        $this->assertProjectAccess((int) $minute->project_id);
         $title = $minute->title;
         $minute->delete();
         $activity->record('minute.deleted', "صورتجلسه «{$title}» حذف شد.");
 
         return response()->json(['success' => true]);
+    }
+
+    private function assertProjectAccess(int $projectId): void
+    {
+        abort_unless(app(InvestmentWorkflowAccessService::class)->canViewProject(auth()->user(), $projectId), 403);
+    }
+
+    public function download(int $id)
+    {
+        $minute = Minute::query()->findOrFail($id);
+        $this->assertProjectAccess((int) $minute->project_id);
+        // Never serve an arbitrary client-supplied filesystem path.
+        $media = MediaFile::query()->where('project_id', $minute->project_id)
+            ->where('file_path', $minute->file_path)->firstOrFail();
+
+        return redirect()->route('media.download', $media);
     }
 }

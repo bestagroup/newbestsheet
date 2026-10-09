@@ -1,0 +1,15 @@
+@csrf
+<input type="hidden" name="lock_version" value="{{ $letter->lock_version ?? 0 }}">
+<div class="row g-3">
+<div class="col-md-3"><label>نوع نامه</label><select name="direction" class="form-select">@foreach(['incoming'=>'وارده','outgoing'=>'صادره'] as $key=>$label)<option value="{{ $key }}" @selected(old('direction',$letter->direction ?? '')===$key)>{{ $label }}</option>@endforeach</select></div>
+<div class="col-md-3"><label>شماره مرجع طرف مکاتبه</label><input name="external_reference" class="form-control" value="{{ old('external_reference',$letter->external_reference ?? '') }}"></div>
+<div class="col-md-3"><label>تاریخ شمسی</label><input required name="issued_on" placeholder="۱۴۰۵/۰۷/۱۶" class="form-control" value="{{ old('issued_on',$letter->issued_on ?? '') }}"></div>
+<div class="col-md-3"><label>مهلت پاسخ (میلادی)</label><input type="date" name="due_on" class="form-control" value="{{ old('due_on',isset($letter) ? $letter->due_on?->format('Y-m-d') : '') }}"></div>
+<div class="col-md-6"><label>فرستنده / گیرنده بیرونی</label><input required name="correspondent" class="form-control" value="{{ old('correspondent',$letter->correspondent ?? '') }}"></div>
+<div class="col-md-6"><label>موضوع</label><input required name="subject" class="form-control" value="{{ old('subject',$letter->subject ?? '') }}"></div>
+<div class="col-md-6"><label>پرونده مرتبط (اختیاری)</label><select name="project_id" class="form-select"><option value="">مکاتبه عمومی شرکت</option>@foreach($projects as $project)<option value="{{ $project->id }}" @selected(old('project_id',$letter->project_id ?? '') == $project->id)>{{ $project->title }}</option>@endforeach</select></div>
+<div class="col-md-6"><label>مسئول پیگیری</label><select required name="assigned_to" class="form-select">@foreach($users as $user)<option value="{{ $user->id }}" @selected(old('assigned_to',$letter->assigned_to ?? '') == $user->id)>{{ $user->name }}</option>@endforeach</select></div>
+<div class="col-12"><label>متن / شرح نامه</label><textarea required name="body" rows="5" class="form-control">{{ old('body',$letter->body ?? '') }}</textarea></div>
+<div class="col-md-6"><label class="form-label">پیوست از آرشیو (اختیاری)</label><select name="media_file_id" class="form-select"><option value="">بدون پیوست</option>@foreach($attachments as $attachment)<option value="{{ $attachment->id }}" @selected(old('media_file_id', $letter->media_file_id ?? '') == $attachment->id)>{{ $attachment->original_name ?: $attachment->name }} — {{ $attachment->project?->title ?? 'آرشیو مستقل' }}</option>@endforeach</select><small>پیوست باید متعلق به پرونده انتخاب‌شده باشد. فایل جدید را ابتدا در آرشیو بارگذاری کنید.</small></div>
+<div class="col-md-6"><label><input type="checkbox" name="confidential" value="1" @checked(old('confidential',$letter->confidential ?? false))> محرمانه</label><p class="text-muted">دسترسی نامه برای ثبت‌کننده، مسئول پیگیری و مدیریت سامانه است.</p></div>
+<div class="col-12"><button class="btn btn-primary">ثبت اطلاعات نامه</button></div></div>

@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\InvestmentRole;
+use App\Support\DashboardSearch;
+use App\Support\Monetary;
 use App\Models\AdministrativeAsset;
 use App\Models\Calendar;
 use App\Models\Company;
@@ -37,6 +39,7 @@ class DashboardMetricsService
 
     public function build(): array
     {
+        request()->validate(['dash_search' => ['nullable', 'array'], 'dash_search.*' => ['nullable', 'string', 'max:120']]);
         /** @var User $viewer */
         $viewer = Auth::user();
         $viewer->loadMissing(['roles:id,title,title_fa', 'lastLogin']);
@@ -229,7 +232,7 @@ class DashboardMetricsService
             $cards->push($this->card('کارکنان فعال', Employee::query()->where('status', 'active')->count(), 'در حال همکاری', 'mdi-account-check-outline', 'success', route('employees.index')));
             $cards->push($this->card('مدارک پرسنلی', EmployeeDocument::query()->count(), 'اسناد بارگذاری‌شده', 'mdi-file-account-outline', 'info', route('employees.index')));
 
-            $items = $items->merge(Employee::query()->latest('id')->limit(15)->get()->map(fn (Employee $employee): array => [
+            $items = $items->merge(Employee::query()->tap(fn ($q) => DashboardSearch::apply($q, 'administrative', ['first_name', 'last_name', 'personnel_code', 'job_title', 'department']))->latest('id')->limit(15)->get()->map(fn (Employee $employee): array => [
                 'title' => $employee->full_name,
                 'subtitle' => collect([$employee->job_title, $employee->department])->filter()->implode(' — ') ?: 'پرونده پرسنلی',
                 'meta' => 'کد پرسنلی: '.$employee->personnel_code,
@@ -242,14 +245,12 @@ class DashboardMetricsService
         }
 
         if ($canAssets) {
-            $assetValue = (float) (AdministrativeAsset::query()
-                ->selectRaw('COALESCE(SUM(purchase_cost * quantity), 0) as total')
-                ->value('total') ?? 0);
+            $assetValue = Monetary::sum(AdministrativeAsset::query()->get(['purchase_cost', 'quantity'])->map(fn ($asset) => (string) Monetary::value($asset->purchase_cost)->multipliedBy($asset->quantity)));
             $cards->push($this->card('اقلام و اموال', AdministrativeAsset::query()->sum('quantity'), 'تعداد کل اقلام ثبت‌شده', 'mdi-package-variant-closed', 'warning', route('assets.index')));
-            $cards->push($this->card('ارزش اموال', $this->money($assetValue), 'ارزش خرید اقلام فعال', 'mdi-cash-multiple', 'success', route('assets.index')));
+            $cards->push($this->card('ارزش اموال', $this->money($assetValue), 'ارزش خرید کل اقلام حذف‌نشده', 'mdi-cash-multiple', 'success', route('assets.index')));
             $cards->push($this->card('اقلام تحویل‌شده', AdministrativeAsset::query()->where('status', 'assigned')->sum('quantity'), 'تحویل کارکنان', 'mdi-account-arrow-left-outline', 'info', route('assets.index')));
 
-            $items = $items->merge(AdministrativeAsset::query()->latest('id')->limit(15)->get()->map(fn (AdministrativeAsset $asset): array => [
+            $items = $items->merge(AdministrativeAsset::query()->tap(fn ($q) => DashboardSearch::apply($q, 'administrative', ['name', 'asset_code', 'category', 'serial_number', 'location']))->latest('id')->limit(15)->get()->map(fn (AdministrativeAsset $asset): array => [
                 'title' => $asset->name,
                 'subtitle' => $asset->category ?: 'کالا/مال اداری',
                 'meta' => 'کد مال: '.$asset->asset_code.' — تعداد: '.number_format($asset->quantity),
@@ -293,6 +294,7 @@ class DashboardMetricsService
 
     private function financeSection(User $viewer, Collection $visibleProjectIds): array
     {
+        $visibleProjectIds = $this->activePortfolioIds($visibleProjectIds);
         $cards = collect();
         $items = collect();
         $canPayments = $this->can($viewer, 'finance');
@@ -300,12 +302,16 @@ class DashboardMetricsService
 
         if ($canPayments) {
             $paymentQuery = Finance::query()->whereIn('project_id', $visibleProjectIds)->where('amount', '>', 0);
-            $cards->push($this->card('مجموع پرداخت سرمایه‌گذاری', $this->money((float) (clone $paymentQuery)->sum('amount')), 'پرداخت‌های ثبت‌شده برای پورتفو', 'mdi-cash-check', 'success', route('finance.index')));
+            $cards->push($this->card('مجموع پرداخت سرمایه‌گذاری', $this->money(Monetary::sum((clone $paymentQuery)->pluck('amount'))), 'پرداخت‌های ثبت‌شده برای پورتفو', 'mdi-cash-check', 'success', route('finance.index')));
             $cards->push($this->card('تعداد پرداخت‌ها', (clone $paymentQuery)->count(), 'اسناد پرداخت سرمایه‌گذاری', 'mdi-receipt-text-outline', 'info', route('finance.index')));
+            $contractTotal = Monetary::sum(Project::query()->whereIn('id', $visibleProjectIds)->pluck('amount_request_accept'));
+            $paidTotal = Monetary::sum((clone $paymentQuery)->pluck('amount'));
+            $cards->push($this->card('کل مبلغ قراردادها', $this->money($contractTotal), 'تعهد سرمایه‌گذاری در پورتفوی فعال', 'mdi-file-sign', 'primary', route('finance.index')));
+            $cards->push($this->card('مانده تعهدات', $this->money(Monetary::difference($contractTotal, $paidTotal)), 'قرارداد منهای پرداخت؛ منفی یعنی مازاد پرداخت', 'mdi-cash-clock', 'warning', route('finance.index')));
 
-            $items = $items->merge((clone $paymentQuery)->with('project:id,title')->latest('id')->limit(15)->get()->map(fn (Finance $finance): array => [
+            $items = $items->merge((clone $paymentQuery)->tap(fn ($q) => DashboardSearch::apply($q, 'finance', ['amount', 'date', 'docserial'], ['project' => ['title', 'company_name']]))->with('project:id,title')->latest('id')->limit(15)->get()->map(fn (Finance $finance): array => [
                 'title' => $finance->project?->title ?: 'پرداخت سرمایه‌گذاری',
-                'subtitle' => $this->money((float) $finance->amount),
+                'subtitle' => $this->money($finance->amount),
                 'meta' => $finance->date ?: 'تاریخ ثبت نشده',
                 'created_at' => $finance->created_at,
                 'url' => route('finance.index'),
@@ -318,9 +324,10 @@ class DashboardMetricsService
         if ($canStatements) {
             $statementQuery = Financial_statement::query()->whereIn('project_id', $visibleProjectIds);
             $cards->push($this->card('صورت‌های مالی ثبت‌شده', (clone $statementQuery)->count(), 'دوره‌های مالی شرکت‌های پورتفو', 'mdi-file-chart-outline', 'primary', route('financialstatement.index')));
-            $cards->push($this->card('شرکت‌های دارای صورت مالی', (clone $statementQuery)->distinct()->count('project_id'), 'پوشش اطلاعات مالی پورتفو', 'mdi-domain', 'warning', route('financialstatement.index')));
+            $cards->push($this->card('پرونده‌های دارای صورت مالی', (clone $statementQuery)->distinct()->count('project_id'), 'پوشش اطلاعات مالی پورتفو', 'mdi-domain', 'warning', route('financialstatement.index')));
 
             $items = $items->merge((clone $statementQuery)
+                ->tap(fn ($q) => DashboardSearch::apply($q, 'finance', ['year', 'month', 'net_profit'], ['project' => ['title', 'company_name']]))
                 ->with('project:id,title')
                 ->orderByDesc('year')
                 ->orderByDesc('month')
@@ -329,7 +336,7 @@ class DashboardMetricsService
                 ->map(fn (Financial_statement $statement): array => [
                     'title' => $statement->project?->title ?: 'صورت مالی',
                     'subtitle' => 'دوره '.$statement->year.'/'.str_pad((string) $statement->month, 2, '0', STR_PAD_LEFT),
-                    'meta' => 'سود خالص: '.$this->money((float) $statement->net_profit),
+                    'meta' => 'سود خالص: '.$this->money($statement->net_profit),
                     'created_at' => $statement->created_at,
                     'url' => route('financialstatement.index'),
                     'kind' => 'صورت مالی',
@@ -338,13 +345,13 @@ class DashboardMetricsService
                 ]));
         }
 
-        $monthly = array_fill(1, 12, 0.0);
+        $monthly = array_fill(1, 12, '0');
         if ($canPayments) {
             $currentYear = (int) Jalalian::fromCarbon(now())->format('Y');
             Finance::query()->whereIn('project_id', $visibleProjectIds)->where('amount', '>', 0)->get(['amount', 'date'])->each(function (Finance $finance) use (&$monthly, $currentYear): void {
                 [$year, $month] = $this->jalaliYearMonth($finance->date);
                 if ($year === $currentYear && $month >= 1 && $month <= 12) {
-                    $monthly[$month] += (float) $finance->amount;
+                    $monthly[$month] = Monetary::sum([$monthly[$month], $finance->amount]);
                 }
             });
         }
@@ -363,6 +370,7 @@ class DashboardMetricsService
 
     private function investmentSection(User $viewer, Collection $visibleProjectIds): array
     {
+        $visibleProjectIds = Project::query()->whereIn('id', $visibleProjectIds)->where('invest_step', '<', 14)->pluck('id');
         $projects = Project::query()->whereIn('id', $visibleProjectIds);
         $canCompanies = $this->can($viewer, 'company');
         $companyCount = $canCompanies
@@ -372,7 +380,7 @@ class DashboardMetricsService
         $cards = collect([
             $this->card('شرکت‌های متقاضی', $companyCount, 'شرکت‌های ثبت‌شده در سامانه', 'mdi-domain-plus', 'info', $canCompanies ? route('panel.company.index') : null),
             $this->card('طرح‌های قابل بررسی', (clone $projects)->count(), 'متناسب با حوزه و تخصیص شما', 'mdi-lightbulb-on-outline', 'primary', $this->can($viewer, 'project') ? route('project.index') : null),
-            $this->card('طرح‌های فعال', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->count(), 'در جریان ارزیابی و تصمیم‌گیری', 'mdi-progress-check', 'success', $this->can($viewer, 'flow') ? route('flow.index') : null),
+            $this->card('طرح‌های جاری', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '<', 6)->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'success', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('مرحله عقد قرارداد', (clone $projects)->where('invest_step', 13)->count(), 'طرح‌های رسیده به مرحله قرارداد', 'mdi-file-sign', 'warning', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('طرح‌های ردشده', (clone $projects)->where('is_rejected', 1)->count(), 'خارج‌شده از فرایند', 'mdi-close-octagon-outline', 'danger', $this->can($viewer, 'project') ? route('project.index') : null),
         ]);
@@ -385,6 +393,7 @@ class DashboardMetricsService
             ->orderBy('investsteps.id')
             ->get();
         $items = Project::query()
+            ->tap(fn ($q) => DashboardSearch::apply($q, 'investment', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
@@ -415,18 +424,20 @@ class DashboardMetricsService
 
     private function portfolioSection(User $viewer, Collection $visibleProjectIds): array
     {
+        $visibleProjectIds = $this->activePortfolioIds($visibleProjectIds);
         $projectCount = Project::query()->whereIn('id', $visibleProjectIds)->count();
         $kpiQuery = KPI::query()->current()->whereIn('project_id', $visibleProjectIds);
         $reportQuery = QuarterlyPerformanceReport::query()->whereIn('project_id', $visibleProjectIds)->where('is_current', true);
         $commitmentQuery = ProjectCommitment::query()->whereIn('project_id', $visibleProjectIds);
 
+        $achievementAverage = KpiMeasurement::query()->whereHas('kpi', fn ($query) => $query->current()->whereIn('project_id', $visibleProjectIds))->avg('achievement_percentage');
         $cards = collect([
-            $this->card('شرکت‌های پورتفو', $projectCount, 'پرونده‌های پس از عقد قرارداد', 'mdi-domain', 'primary', $this->can($viewer, 'flow') ? route('flow.index') : null),
+            $this->card('طرح‌های فعال پورتفو', $projectCount, 'پرونده‌های پس از عقد قرارداد', 'mdi-domain', 'primary', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('شاخص‌های کلیدی فعال', (clone $kpiQuery)->whereNull('completed_at')->count(), 'KPIهای در حال پایش', 'mdi-target', 'success', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('گزارش‌های فصلی', (clone $reportQuery)->count(), 'نسخه‌های جاری عملکرد پورتفو', 'mdi-chart-box-outline', 'info', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('تعهدات باز', (clone $commitmentQuery)->where('status', 'pending')->whereNull('completed_at')->count(), 'تعهدات نیازمند پیگیری', 'mdi-clipboard-clock-outline', 'warning', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('تعهدات معوق', (clone $commitmentQuery)->where('status', 'pending')->whereNull('completed_at')->whereDate('due_at', '<', today())->count(), 'عبورکرده از سررسید', 'mdi-alert-octagon-outline', 'danger', $this->can($viewer, 'flow') ? route('flow.index') : null),
-            $this->card('میانگین تحقق KPI', number_format((float) KpiMeasurement::query()->whereHas('kpi', fn ($query) => $query->current()->whereIn('project_id', $visibleProjectIds))->avg('achievement_percentage'), 1).'٪', 'براساس اندازه‌گیری‌های ثبت‌شده', 'mdi-chart-areaspline', 'success'),
+            $this->card('میانگین اندازه‌گیری‌های KPI', $achievementAverage === null ? '—' : number_format((float) $achievementAverage, 1).'٪', 'تمام اندازه‌گیری‌های ثبت‌شده برای KPIهای جاری', 'mdi-chart-areaspline', 'success'),
         ]);
 
         $statusRows = (clone $kpiQuery)
@@ -434,6 +445,7 @@ class DashboardMetricsService
             ->groupBy('status')
             ->get();
         $items = Project::query()
+            ->tap(fn ($q) => DashboardSearch::apply($q, 'portfolio', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->withCount(['currentKpis as kpis_count', 'quarterlyPerformanceReports'])
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
@@ -467,11 +479,11 @@ class DashboardMetricsService
         $projects = Project::query()->whereIn('id', $visibleProjectIds);
         $cards = collect([
             $this->card('کل طرح‌ها', (clone $projects)->count(), 'تمام پرونده‌های قابل مشاهده', 'mdi-lightbulb-group-outline', 'primary', $this->can($viewer, 'report') ? route('report.index') : null),
-            $this->card('شرکت‌های پورتفو', (clone $projects)->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)->count(), 'پرونده‌های پس از قرارداد', 'mdi-domain', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
-            $this->card('طرح‌های فعال', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('progress_percentage', '<', 100)->count(), 'در حال پیشروی در فرایند', 'mdi-progress-check', 'info', $this->can($viewer, 'report') ? route('report.index') : null),
-            $this->card('طرح‌های تکمیل‌شده', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('progress_percentage', '>=', 100)->count(), 'فرایندهای تکمیل‌شده', 'mdi-check-decagram-outline', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
+            $this->card('طرح‌های فعال پورتفو', $this->activePortfolioIds($visibleProjectIds)->count(), 'پرونده‌های پس از قرارداد', 'mdi-domain', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
+            $this->card('طرح‌های جاری', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '<', 6)->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'info', $this->can($viewer, 'report') ? route('report.index') : null),
+            $this->card('خروج کامل', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '>=', 20)->count(), 'خارج‌شده از سرمایه‌گذاری', 'mdi-check-decagram-outline', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('طرح‌های ردشده', (clone $projects)->where('is_rejected', 1)->count(), 'خارج‌شده از فرایند', 'mdi-close-octagon-outline', 'danger', $this->can($viewer, 'report') ? route('report.index') : null),
-            $this->card('کل پرداخت سرمایه‌گذاری', $this->money((float) Finance::query()->whereIn('project_id', $visibleProjectIds)->sum('amount')), 'پرداخت ثبت‌شده برای طرح‌ها', 'mdi-cash-multiple', 'warning', $this->can($viewer, 'report') ? route('report.index') : null),
+            $this->card('کل پرداخت سرمایه‌گذاری', $this->money(Monetary::sum(Finance::query()->whereIn('project_id', $this->activePortfolioIds($visibleProjectIds))->pluck('amount'))), 'پرداخت تجمعی پورتفوی فعال', 'mdi-cash-multiple', 'warning', $this->can($viewer, 'report') ? route('report.index') : null),
         ]);
 
         $stageRows = Project::query()
@@ -482,6 +494,7 @@ class DashboardMetricsService
             ->orderBy('investsteps.id')
             ->get();
         $items = Project::query()
+            ->tap(fn ($q) => DashboardSearch::apply($q, 'executive', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
@@ -510,6 +523,12 @@ class DashboardMetricsService
         );
     }
 
+    private function activePortfolioIds(Collection $ids): Collection
+    {
+        return Project::query()->whereIn('id', $ids)->whereBetween('invest_step', [14, 19])
+            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->pluck('id');
+    }
+
     private function card(string $label, string|int|float $value, string $hint, string $icon, string $tone, ?string $url = null): array
     {
         return compact('label', 'value', 'hint', 'icon', 'tone', 'url');
@@ -526,6 +545,14 @@ class DashboardMetricsService
             default => ['آخرین موارد', 'جدیدترین اطلاعات قابل مشاهده', 'جست‌وجو در موارد…'],
         };
 
+        $chart['title'] = match ($key) {
+            'finance' => 'پرداخت ماهانه پورتفوی فعال در سال '.Jalalian::fromCarbon(now())->format('Y'),
+            'investment' => 'تعداد طرح‌ها در مراحل پیش از سرمایه‌گذاری (شامل ردشده‌ها)',
+            'portfolio' => 'وضعیت شاخص‌های کلیدی پورتفوی فعال',
+            'executive' => 'تعداد کل پرونده‌ها به تفکیک مرحله (شامل ردشده‌ها)',
+            default => $this->can(Auth::user(), 'assets') ? '۸ دسته اموال با بیشترین تعداد اقلام' : 'وضعیت همکاری کارکنان',
+        };
+        $chart['unit'] = $key === 'finance' ? 'ریال' : 'تعداد';
         return compact(
             'key', 'title', 'description', 'icon', 'tone', 'cards', 'items', 'chart',
             'itemsTitle', 'itemsDescription', 'searchPlaceholder'
@@ -537,7 +564,7 @@ class DashboardMetricsService
         return [
             'type' => $type,
             'labels' => collect($labels)->values(),
-            'data' => collect($data)->map(fn ($value): float => (float) $value)->values(),
+            'data' => collect($data)->map(fn ($value): string => (string) $value)->values(),
         ];
     }
 
@@ -551,9 +578,9 @@ class DashboardMetricsService
         return collect($slugs)->contains(fn (string $slug): bool => $this->can($viewer, $slug));
     }
 
-    private function money(float $value): string
+    private function money(mixed $value): string
     {
-        return number_format($value, 0).' ریال';
+        return Monetary::format($value).' ریال';
     }
 
     private function actionLabel(string $action): string

@@ -8,12 +8,12 @@ use App\Models\Finance;
 use App\Models\MenuPanel;
 use App\Models\Project;
 use App\Models\SubmenuPanel;
-use App\Services\ActivityLogService;
+use App\Services\FinanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Throwable;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class FinancialController extends Controller
@@ -40,7 +40,7 @@ class FinancialController extends Controller
 
             return DataTables::of($query)
                 ->addColumn('contract_amount', static fn ($row): string => number_format((float) ($row->amount_request_accept ?? 0)))
-                ->editColumn('amount', static fn ($row): string => number_format((float) ($row->amount ?? 0)))
+                ->editColumn('amount', static fn ($row): string => \App\Support\Monetary::format($row->amount))
                 ->addColumn('contract_date', static fn ($row) => $row->start_date)
                 ->addColumn('action', function ($row): string {
                     $base = 'btn btn-sm btn-icon rounded-pill waves-effect mx-1';
@@ -75,20 +75,6 @@ class FinancialController extends Controller
         return view('panel.finance', compact('menupanels', 'submenupanels', 'thispage', 'projects'));
     }
 
-    public function store(FinanceRequest $request, ActivityLogService $activity): JsonResponse
-    {
-        try {
-            $finance = Finance::query()->create([...$request->validated(), 'finance_type' => 'vc-investment']);
-            $activity->record('finance.created', 'پرداخت سرمایه‌گذاری #'.$finance->id.' ثبت شد.');
-
-            return $this->success('پرداخت با موفقیت ثبت شد.');
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $this->failure('ثبت پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
-    }
-
     public function edit(int $id)
     {
         $finance = Finance::query()->findOrFail($id);
@@ -97,34 +83,25 @@ class FinancialController extends Controller
         return view('panel.partials.edit-form-finance', compact('finance', 'projects'));
     }
 
-    public function update(FinanceRequest $request, int $id, ActivityLogService $activity): JsonResponse
+    public function store(FinanceRequest $request, FinanceService $service): JsonResponse
     {
-        try {
-            $finance = Finance::query()->findOrFail($id);
-            $finance->update([...$request->validated(), 'finance_type' => 'vc-investment']);
-            $activity->record('finance.updated', 'پرداخت سرمایه‌گذاری #'.$finance->id.' ویرایش شد.');
+        $finance = $service->create($request->validated());
 
-            return $this->success('پرداخت با موفقیت ویرایش شد.');
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $this->failure('ویرایش پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
+        return response()->json(['success' => true, 'flag' => 'success', 'subject' => 'عملیات موفق', 'message' => 'پرداخت ثبت شد.', 'id' => $finance->id, 'next_idempotency_key' => (string) Str::uuid()]);
     }
 
-    public function destroy(int $id, ActivityLogService $activity): JsonResponse
+    public function update(FinanceRequest $request, int $id, FinanceService $service): JsonResponse
     {
-        try {
-            $finance = Finance::query()->findOrFail($id);
-            $finance->delete();
-            $activity->record('finance.deleted', 'پرداخت سرمایه‌گذاری #'.$id.' حذف شد.');
+        $service->update($id, $request->validated());
 
-            return $this->success('پرداخت با موفقیت حذف شد.');
-        } catch (Throwable $exception) {
-            report($exception);
+        return $this->success('پرداخت ویرایش شد.');
+    }
 
-            return $this->failure('حذف پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
+    public function destroy(int $id, FinanceService $service): JsonResponse
+    {
+        $service->delete($id);
+
+        return $this->success('پرداخت حذف و سابقه آن نگهداری شد.');
     }
 
     private function success(string $message): JsonResponse

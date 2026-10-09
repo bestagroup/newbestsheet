@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
+use App\Services\ArchiveAccessService;
 use App\Services\InvestmentWorkflowAccessService;
 use App\Services\MediaFileStorageLocator;
 use Illuminate\Http\Request;
@@ -22,7 +23,8 @@ class MediaDownloadController extends Controller
         $project = $media->project;
         $isOwner = $project && (int) $project->user_id === (int) $user->getKey();
         $canViewWorkflow = $project && $workflowAccess->canViewProject($user, (int) $project->getKey());
-        $canManageFiles = Gate::forUser($user)->allows('can-access', ['filemanager', 'view']);
+        $canManageFiles = Gate::forUser($user)->allows('can-access', ['filemanager', 'view'])
+            && app(ArchiveAccessService::class)->allows($media, $user);
 
         abort_unless($isOwner || $canViewWorkflow || $canManageFiles, 403);
         abort_if($media->scan_status === 'infected', 410, 'این فایل به‌دلیل آلودگی امنیتی قرنطینه شده است.');

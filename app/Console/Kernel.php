@@ -12,6 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        $schedule->command('documents:scan')->everyFiveMinutes()->withoutOverlapping();
         $schedule->command('auth:clear-resets')
             ->dailyAt('02:10')
             ->withoutOverlapping();

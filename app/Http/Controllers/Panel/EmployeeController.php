@@ -94,6 +94,7 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee, ActivityLogService $activity): RedirectResponse
     {
+        abort_if($employee->assets()->exists(), 409, 'ابتدا تحویل یا انتقال اموال این کارمند را ثبت کنید.');
         $old = $employee->toArray();
         $employee->delete();
         $activity->record(

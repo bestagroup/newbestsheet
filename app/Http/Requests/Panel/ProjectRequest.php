@@ -79,7 +79,7 @@ class ProjectRequest extends FormRequest
             'address' => ['nullable', 'string'],
             'logo' => ['nullable', 'string', 'max:2048'],
             'description' => ['nullable', 'string'],
-            'percentageshare' => ['nullable', 'numeric', 'min:0'],
+            'percentageshare' => ['nullable', 'numeric', 'between:0,100'],
             'portfo_status' => ['nullable', 'string', 'max:255'],
             'activity_status' => ['nullable', 'string', 'max:255'],
             'start_date' => ['nullable', 'date_format:Y-m-d'],

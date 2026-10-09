@@ -10,5 +10,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(InvestmentReferenceDataSeeder::class);
         $this->call(OrganizationalAccessSeeder::class);
+        $this->call(EnterpriseModuleSeeder::class);
     }
 }

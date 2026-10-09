@@ -18,6 +18,7 @@ class FinancialStatementRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $payload = [
+            'period_type' => $this->input('period_type', 'legacy'),
             'project_id' => LocalizedInputNormalizer::digits($this->input('project_id')),
             'year' => LocalizedInputNormalizer::digits($this->input('year')),
             'month' => LocalizedInputNormalizer::digits($this->input('month')),
@@ -36,10 +37,12 @@ class FinancialStatementRequest extends FormRequest
         $periodUnique = Rule::unique('financial_statements', 'project_id')
             ->where(fn ($query) => $query
                 ->where('year', $this->input('year'))
-                ->where('month', $this->input('month')))
+                ->where('month', $this->input('month'))
+                ->where('period_type', $this->input('period_type')))
             ->ignore($statementId);
 
         $rules = [
+            'period_type' => ['required', Rule::in(['annual', 'quarterly', 'legacy'])],
             'project_id' => [
                 'required',
                 'integer',
@@ -49,7 +52,7 @@ class FinancialStatementRequest extends FormRequest
                 $periodUnique,
             ],
             'year' => ['required', 'integer', 'between:1300,1600'],
-            'month' => ['required', 'integer', 'between:1,12'],
+            'month' => ['required', 'integer', 'between:1,12', Rule::when($this->input('period_type') === 'quarterly', Rule::in([3, 6, 9, 12]))],
         ];
 
         foreach (Financial_statement::monetaryFields() as $field) {

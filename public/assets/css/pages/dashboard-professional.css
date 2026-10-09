@@ -1,0 +1,23 @@
+.dashboard-shell {max-width:1680px;margin-inline:auto;--dash-accent:#183b56}
+.dashboard-shell .dashboard-hero {background:linear-gradient(115deg,#102a43,#164d60 68%,#087f73);padding:28px!important;box-shadow:0 12px 32px #102a431a}
+.dashboard-shell .dashboard-nav {display:flex;flex-wrap:wrap;gap:8px;padding:12px;border:1px solid var(--dash-border);border-radius:16px;background:var(--bs-body-bg,#fff)}
+.dashboard-nav a {color:inherit;padding:9px 14px;border-radius:10px;background:rgba(22,134,107,.07);font-size:.84rem;text-decoration:none}
+.dashboard-nav a:hover,.dashboard-nav a:focus-visible {background:#183b56;color:white}
+.dashboard-shell [id^="domain-"],#dashboard-work,#dashboard-personal {scroll-margin-top:90px}
+.dashboard-shell .metric-card {position:relative;background:linear-gradient(130deg,rgba(24,59,86,.045),transparent);border-inline-start:4px solid #183b56;overflow-wrap:anywhere}
+.dashboard-shell .metric-tone-success {border-inline-start-color:#16866b;background:linear-gradient(130deg,#16866b0e,transparent)}
+.dashboard-shell .metric-tone-info {border-inline-start-color:#2596be}
+.dashboard-shell .metric-tone-warning {border-inline-start-color:#d49a32}
+.dashboard-shell .metric-tone-danger {border-inline-start-color:#d45b67}
+.dashboard-shell .metric-value {font-variant-numeric:tabular-nums;font-size:clamp(1.15rem,1.6vw,1.6rem)}
+.dashboard-shell .domain-panel-header {border-inline-start:4px solid #16866b}
+.dashboard-shell .domain-items-scroll {max-height:540px}
+.dashboard-shell [hidden] {display:none!important}
+.dashboard-shell .chart-data {padding:10px 12px;border:1px solid var(--dash-border);border-radius:12px}
+.dashboard-shell .chart-data summary {cursor:pointer;color:var(--dash-muted);font-size:.82rem}
+.dashboard-shell .dashboard-search {border:1px solid var(--dash-border);background:rgba(100,116,139,.035);padding:12px;border-radius:14px}
+.dashboard-shell .local-list-search {position:sticky;top:0;z-index:1;background:var(--bs-body-bg,#fff);padding-block:10px}
+.dashboard-shell :focus-visible {outline:3px solid #2596be;outline-offset:3px}
+.dashboard-shell .domain-item__time {font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.dashboard-shell * {animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:575px){.dashboard-shell .dashboard-hero {padding:20px!important}.dashboard-shell .domain-items-toolbar{display:block}.dashboard-shell .metric-value{font-size:1.25rem}}

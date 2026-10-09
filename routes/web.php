@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Middleware\EnsureSystemAdministrator;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('admin')->namespace('App\Http\Controllers\Panel')->group(function () {
@@ -51,15 +52,17 @@ Route::middleware('admin')->namespace('App\Http\Controllers\Panel')->group(funct
     Route::middleware('resource.permission:paneluser')->group(function () {
         Route::resource('panel/paneluser', 'PaneluserController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
-    Route::middleware('resource.permission:roleuser')->group(function () {
+    Route::middleware(['resource.permission:roleuser', EnsureSystemAdministrator::class])->group(function () {
         Route::resource('panel/roleuser', 'RoleuserController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
     Route::middleware('investment.manager')->group(function () {
         Route::resource('panel/leveluser', 'LeveluserController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
-    Route::middleware('resource.permission:useraccess')->group(function () {
+    Route::middleware(['resource.permission:useraccess', EnsureSystemAdministrator::class])->group(function () {
         Route::resource('panel/useraccess', 'UseraccessController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
+    Route::get('panel/archive-trash', 'FilemanagerController@trash')->middleware('submenu.permission:delete,filemanager')->name('archive.trash');
+    Route::post('panel/archive-trash/{id}/restore', 'FilemanagerController@restore')->middleware('submenu.permission:delete,filemanager')->name('archive.restore');
     Route::middleware('resource.permission:filemanager')->group(function () {
         Route::resource('panel/filemanager', 'FilemanagerController')->only(['index', 'store', 'show', 'edit', 'update', 'destroy']);
     });
@@ -82,6 +85,7 @@ Route::middleware('admin')->namespace('App\Http\Controllers\Panel')->group(funct
             ]);
         Route::resource('company', 'CompanyController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
+    Route::get('minute/{id}/download', 'MinuteController@download')->middleware('submenu.permission:view,flow')->name('minute.download');
     Route::get('minute', 'MinuteController@index')->middleware('submenu.permission:view,flow')->name('minute.index');
     Route::post('minute', 'MinuteController@store')->middleware('submenu.permission:edit,flow')->name('minute.store');
     Route::get('minute/{id}/edit', 'MinuteController@edit')->middleware('submenu.permission:edit,flow')->name('minute.edit');
@@ -177,6 +181,18 @@ Route::middleware('admin')->namespace('App\Http\Controllers\Panel')->group(funct
             ->parameters(['assets' => 'asset'])
             ->only(['index', 'store', 'update', 'destroy']);
     });
+
+    Route::middleware('resource.permission:meetings')->group(function () {
+        Route::resource('panel/meetings', 'PortfolioMeetingController')->only(['index', 'store', 'show', 'update']);
+    });
+    Route::post('panel/meetings/{meeting}/transition', 'PortfolioMeetingController@transition')->middleware('submenu.permission:edit,meetings')->name('meetings.transition');
+    Route::post('panel/meetings/{meeting}/resolutions', 'PortfolioMeetingController@resolution')->middleware('submenu.permission:edit,meetings')->name('meetings.resolutions.store');
+    Route::patch('panel/meetings/{meeting}/resolutions/{resolution}', 'PortfolioMeetingController@complete')->middleware('submenu.permission:edit,meetings')->name('meetings.resolutions.complete');
+    Route::middleware('resource.permission:letters')->group(function () {
+        Route::resource('panel/letters', 'ExternalLetterController')->only(['index', 'store', 'show', 'update']);
+    });
+    Route::get('panel/letters/{letter}/attachment', 'ExternalLetterController@attachment')->middleware('submenu.permission:view,letters')->name('letters.attachment');
+    Route::post('panel/letters/{letter}/transition', 'ExternalLetterController@transition')->middleware('submenu.permission:edit,letters')->name('letters.transition');
 
     Route::get('profile', 'ProfileController@index')->name('profile');
     Route::patch('panel/profile/user', 'ProfileController@updateUser')->name('profile.user.update');

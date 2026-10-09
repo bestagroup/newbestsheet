@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Panel;
 use App\Enums\InvestmentRole;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\GovernanceReportService;
 use App\Services\OperationalAnalyticsService;
 use App\Services\PortfolioFinancialReportService;
 use App\Services\PortfolioPerformanceReportService;
@@ -31,7 +32,9 @@ class ReportController extends Controller
         $visibleProjectIds = $this->operationalAnalytics->visibleProjectIds($request->user());
         $projects = Project::query()
             ->whereIn('id', $visibleProjectIds)
-            ->whereHas('financialStatements')
+            ->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
+            ->where('invest_step', '<', 20)
+            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))
             ->orderBy('title')
             ->get(['id', 'title', 'company_name']);
 
@@ -46,6 +49,7 @@ class ReportController extends Controller
         ]));
 
         return view('panel.report', [
+            'governance' => app(GovernanceReportService::class)->build($request->user(), $request->integer('project_id') ?: null),
             'thispage' => $thispage,
             'companies' => $projects,
             'netSales' => $series['netSales'],
@@ -65,6 +69,7 @@ class ReportController extends Controller
             'totalContract' => $report['totalContract'],
             'remainingCommitment' => $report['remainingCommitment'],
             'reportCounts' => $report['reportCounts'],
+            'investmentSummary' => app(\App\Services\InvestmentReportSummaryService::class)->build($request->user(), (string) $request->input('period_type', 'legacy')),
             'operationalAnalytics' => $operational,
             'performanceRows' => $performanceRows,
         ]);
@@ -191,7 +196,10 @@ class ReportController extends Controller
             fputcsv($stream, $headers, ',', '"', '');
 
             foreach ($rows as $row) {
-                fputcsv($stream, is_array($row) ? $row : (array) $row, ',', '"', '');
+                fputcsv($stream, array_map(static function ($value) {
+                    return is_string($value) && preg_match('/^[\s]*[=+@-]/u', $value)
+                        ? "'".$value : $value;
+                }, is_array($row) ? $row : (array) $row), ',', '"', '');
             }
 
             fclose($stream);

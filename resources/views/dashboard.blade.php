@@ -3,6 +3,7 @@
 @section('title', 'داشبورد شخصی و عملکرد حوزه کاری')
 
 @section('style')
+    <link rel="stylesheet" href="{{ asset('assets/css/pages/dashboard-professional.css') }}">
     <style>
         .dashboard-shell { --dash-border: rgba(15, 23, 42, .08); --dash-muted: #64748b; }
         .dashboard-hero {
@@ -126,7 +127,7 @@
             ->implode('');
     @endphp
 
-    <div class="dashboard-shell">
+    <div class="dashboard-shell" dir="rtl">
         <section class="dashboard-hero p-4 p-lg-5 mb-4">
             <div class="position-relative" style="z-index:1">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -137,13 +138,21 @@
                     </div>
                     <div class="text-start">
                         <div class="small opacity-75">آخرین به‌روزرسانی</div>
-                        <strong>{{ $generatedAt }}</strong>
+                        <strong>{{ $generatedAt }}</strong><button type="button" class="btn btn-sm btn-light d-block mt-2 js-dashboard-refresh"><i class="mdi mdi-refresh me-1"></i>به‌روزرسانی اطلاعات</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="mb-5">
+        <nav class="dashboard-nav mb-4" aria-label="دسترسی سریع داشبورد">
+            <a href="#dashboard-personal">برنامه و اطلاعات من</a>
+            <a href="#dashboard-work">وظایف و پیگیری‌ها</a>
+            @foreach($domainSections as $section)
+                <a href="#domain-{{ $section['key'] }}"><i class="mdi {{ $section['icon'] }}"></i> {{ str_replace('گزارش ', '', $section['title']) }}</a>
+            @endforeach
+        </nav>
+        @if($errors->any())<div class="alert alert-danger" role="alert">عبارت جستجو باید متن و حداکثر ۱۲۰ نویسه باشد.</div>@endif
+        <section class="mb-5" id="dashboard-personal">
             <div class="section-heading mb-3">
                 <span class="section-number">۱</span>
                 <div><h5 class="mb-1">اطلاعات شخصی و جلسات من</h5><div class="dashboard-muted">مشخصات هویتی، نقش سازمانی و برنامه جلسات پیش‌رو</div></div>
@@ -206,7 +215,7 @@
             </div>
         </section>
 
-        <section>
+        <section id="dashboard-work">
             <div class="section-heading mb-3">
                 <span class="section-number">۲</span>
                 <div><h5 class="mb-1">عملکرد، وظایف و گزارش حوزه کاری من</h5><div class="dashboard-muted">کارهای انجام‌شده توسط شما و شاخص‌های متناسب با دسترسی‌های سازمانی</div></div>
@@ -215,7 +224,7 @@
             <div class="row g-3 mb-4">
                 @foreach($personalCards as $card)
                     <div class="col-sm-6 col-xl-3">
-                        <div class="metric-card bg-card">
+                        <div class="metric-card bg-card metric-tone-{{ $card['tone'] }}">
                             <div class="d-flex justify-content-between gap-3">
                                 <div><div class="metric-value">{{ number_format((float) $card['value']) }}</div><strong class="d-block mt-1">{{ $card['label'] }}</strong><div class="metric-hint mt-1">{{ $card['hint'] }}</div></div>
                                 <span class="metric-icon tone-{{ $card['tone'] }}"><i class="mdi {{ $card['icon'] }} mdi-24px"></i></span>
@@ -273,7 +282,7 @@
             @endif
 
             @forelse($domainSections as $section)
-                <div class="domain-panel mb-4">
+                <div class="domain-panel mb-4" id="domain-{{ $section['key'] }}">
                     <div class="domain-panel-header">
                         <div class="d-flex align-items-center gap-3">
                             <span class="domain-icon tone-{{ $section['tone'] }}"><i class="mdi {{ $section['icon'] }} mdi-24px"></i></span>
@@ -285,8 +294,8 @@
                             @foreach($section['cards'] as $card)
                                 <div class="col-sm-6 col-xl-{{ $section['cards']->count() > 4 ? '4' : '3' }}">
                                     @if($card['url'])<a class="text-reset d-block h-100" href="{{ $card['url'] }}">@endif
-                                        <div class="metric-card">
-                                            <div class="d-flex justify-content-between gap-2"><div><div class="metric-value">{{ is_numeric($card['value']) ? number_format((float) $card['value']) : $card['value'] }}</div><strong class="d-block mt-1">{{ $card['label'] }}</strong><div class="metric-hint mt-1">{{ $card['hint'] }}</div></div><span class="metric-icon tone-{{ $card['tone'] }}"><i class="mdi {{ $card['icon'] }} mdi-24px"></i></span></div>
+                                        <div class="metric-card metric-tone-{{ $card['tone'] }}">
+                                            <div class="d-flex justify-content-between gap-2"><div><div class="metric-value">{{ is_numeric($card['value']) ? \App\Support\Monetary::format($card['value']) : $card['value'] }}</div><strong class="d-block mt-1">{{ $card['label'] }}</strong><div class="metric-hint mt-1">{{ $card['hint'] }}</div></div><span class="metric-icon tone-{{ $card['tone'] }}"><i class="mdi {{ $card['icon'] }} mdi-24px"></i></span></div>
                                         </div>
                                     @if($card['url'])</a>@endif
                                 </div>
@@ -295,9 +304,10 @@
 
                         <div class="row g-4">
                             <div class="col-xl-7">
-                                <h6 class="mb-3">توزیع آماری حوزه</h6>
+                                <h6 class="mb-1">{{ $section['chart']['title'] }}</h6><p class="dashboard-muted mb-3">واحد: {{ $section['chart']['unit'] }} · نمودار و کارت‌ها مستقل از جستجوی فهرست هستند.</p>
                                 @if(collect($section['chart']['data'])->sum() > 0)
-                                    <div class="chart-wrap"><canvas id="domain-chart-{{ $section['key'] }}"></canvas></div>
+                                    <div class="chart-wrap" style="height:{{ $section['chart']['type'] === 'bar' && $section['key'] !== 'finance' ? max(300, count($section['chart']['labels']) * 30) : 300 }}px"><canvas id="domain-chart-{{ $section['key'] }}" role="img" aria-label="{{ $section['chart']['title'] }}؛ جزئیات در جدول زیر"></canvas></div>
+                                    <details class="chart-data mt-3"><summary>مشاهده جدول داده‌های نمودار</summary><div class="table-responsive"><table class="table table-sm"><thead><tr><th>عنوان</th><th>{{ $section['chart']['unit'] }}</th></tr></thead><tbody>@foreach($section['chart']['labels'] as $index => $label)<tr><td>{{ $label }}</td><td>{{ \App\Support\Monetary::format($section['chart']['data'][$index]) }}</td></tr>@endforeach</tbody></table></div></details>
                                 @else
                                     <div class="empty-state border rounded-3">برای ترسیم نمودار هنوز داده کافی ثبت نشده است.</div>
                                 @endif
@@ -308,18 +318,25 @@
                                         <h6>{{ $section['itemsTitle'] }}</h6>
                                         <div class="dashboard-muted">{{ $section['itemsDescription'] }} ({{ number_format($section['items']->count()) }} مورد)</div>
                                     </div>
-                                    @if($section['items']->count() > 1)
-                                        <label class="domain-items-search" aria-label="جست‌وجو در {{ $section['itemsTitle'] }}">
-                                            <span class="input-group input-group-sm">
-                                                <span class="input-group-text"><i class="mdi mdi-magnify"></i></span>
-                                                <input type="search" class="form-control js-domain-search" data-domain="{{ $section['key'] }}" placeholder="{{ $section['searchPlaceholder'] }}" autocomplete="off">
-                                            </span>
-                                        </label>
-                                    @endif
                                 </div>
+                                <form method="GET" action="{{ route('dashboard') }}#domain-{{ $section['key'] }}" class="dashboard-search mb-3">
+                                    @foreach($domainSections as $other)
+                                        @if($other['key'] !== $section['key'] && is_string(request('dash_search.'.$other['key'])))
+                                            <input type="hidden" name="dash_search[{{ $other['key'] }}]" value="{{ request('dash_search.'.$other['key']) }}">
+                                        @endif
+                                    @endforeach
+                                    <label class="form-label small" for="search-{{ $section['key'] }}">جستجو در تمام رکوردهای مجاز این حوزه</label>
+                                    <div class="input-group">
+                                        <input id="search-{{ $section['key'] }}" type="search" name="dash_search[{{ $section['key'] }}]" value="{{ is_string(request('dash_search.'.$section['key'])) ? request('dash_search.'.$section['key']) : '' }}" class="form-control js-domain-search" maxlength="120" placeholder="{{ $section['searchPlaceholder'] }}">
+                                        <button class="btn btn-primary" type="submit">جستجو</button>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-2 gap-2"><small class="dashboard-muted">همه واژه‌ها؛ اعداد فارسی/انگلیسی و ی/ک عربی پشتیبانی می‌شوند. حداکثر ۸ واژه.</small><button class="btn btn-sm btn-link js-clear-search" type="button">پاک‌کردن</button></div>
+                                </form>
+                                <div class="d-flex gap-2 align-items-center mb-2"><label class="small" for="kind-{{ $section['key'] }}">نوع رکورد</label><select id="kind-{{ $section['key'] }}" class="form-select form-select-sm js-kind-filter" data-domain="{{ $section['key'] }}" style="max-width:160px"><option value="">همه موارد نمایش‌داده‌شده</option>@foreach($section['items']->pluck('kind')->unique() as $kind)<option>{{ $kind }}</option>@endforeach</select><small class="dashboard-muted js-result-count" data-domain="{{ $section['key'] }}" aria-live="polite"></small></div>
+                                <p class="dashboard-muted">حداکثر ۳۰ نتیجه اخیر؛ در بخش‌های مالی و اداری حداکثر ۱۵ نتیجه از هر نوع.</p>
                                 <div class="domain-items-scroll" data-domain-list="{{ $section['key'] }}">
                                     @forelse($section['items'] as $item)
-                                        @if($item['url'])<a class="domain-item js-domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div class="domain-item js-domain-item">@endif
+                                        @if($item['url'])<a data-kind="{{ $item['kind'] ?? 'مورد' }}" class="domain-item js-domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div data-kind="{{ $item['kind'] ?? 'مورد' }}" class="domain-item js-domain-item">@endif
                                             <div class="d-flex align-items-start gap-2">
                                                 <span class="domain-item__icon tone-{{ $item['tone'] ?? $section['tone'] }}"><i class="mdi {{ $item['icon'] ?? $section['icon'] }}"></i></span>
                                                 <span class="min-w-0 flex-grow-1">
@@ -337,7 +354,7 @@
                                             </div>
                                         @if($item['url'])</a>@else</div>@endif
                                     @empty
-                                        <div class="empty-state border rounded-3">هنوز رکوردی در این حوزه ثبت نشده است.</div>
+                                        <div class="empty-state border rounded-3">رکوردی در محدوده دسترسی و جستجوی فعلی پیدا نشد.</div>
                                     @endforelse
                                     <div class="empty-state domain-items-empty border rounded-3" data-domain-empty="{{ $section['key'] }}" hidden>موردی مطابق عبارت جست‌وجو پیدا نشد.</div>
                                 </div>
@@ -354,62 +371,10 @@
 
 @push('scripts')
     <script src="{{ asset('assets/vendor/libs/chartjs/chartjs.js') }}"></script>
+    <script src="{{ asset('assets/js/pages/dashboard-professional.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.js-domain-search').forEach(input => {
-                const list = document.querySelector(`[data-domain-list="${input.dataset.domain}"]`);
-                if (!list) return;
-                const items = Array.from(list.querySelectorAll('.js-domain-item'));
-                const empty = list.querySelector(`[data-domain-empty="${input.dataset.domain}"]`);
-
-                input.addEventListener('input', () => {
-                    const query = input.value.trim().toLocaleLowerCase('fa-IR');
-                    let visibleCount = 0;
-                    items.forEach(item => {
-                        const matches = query === '' || item.textContent.toLocaleLowerCase('fa-IR').includes(query);
-                        item.hidden = !matches;
-                        if (matches) visibleCount++;
-                    });
-                    if (empty) empty.hidden = visibleCount !== 0;
-                });
-            });
-
-            if (!window.Chart) return;
-            const sections = @json($domainSections->mapWithKeys(fn($section) => [$section['key'] => $section['chart']]));
-            const colors = ['#4f46e5', '#0ea5e9', '#10b981', '#f97316', '#e11d48', '#8b5cf6', '#14b8a6', '#f59e0b', '#64748b', '#22c55e', '#3b82f6', '#a855f7'];
-            Chart.defaults.font.family = 'Vazirmatn, IRANSans, sans-serif';
-            Chart.defaults.color = '#64748b';
-
-            Object.entries(sections).forEach(([key, chart]) => {
-                const canvas = document.getElementById(`domain-chart-${key}`);
-                if (!canvas || !chart.data.some(value => Number(value) > 0)) return;
-                new Chart(canvas, {
-                    type: chart.type,
-                    data: {
-                        labels: chart.labels,
-                        datasets: [{
-                            label: 'مقدار',
-                            data: chart.data,
-                            backgroundColor: chart.type === 'doughnut' ? colors : 'rgba(79, 70, 229, .78)',
-                            borderWidth: 0,
-                            borderRadius: chart.type === 'bar' ? 7 : 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {display: chart.type === 'doughnut', position: 'bottom', labels: {usePointStyle: true, boxWidth: 8}},
-                            tooltip: {rtl: true}
-                        },
-                        scales: chart.type === 'bar' ? {
-                            x: {grid: {display: false}, ticks: {maxRotation: 45, minRotation: 0}},
-                            y: {beginAtZero: true, grid: {color: 'rgba(100, 116, 139, .12)'}, ticks: {callback: value => new Intl.NumberFormat('fa-IR', {notation: 'compact'}).format(value)}}
-                        } : undefined,
-                        cutout: chart.type === 'doughnut' ? '64%' : undefined
-                    }
-                });
-            });
+            window.BestsheetDashboard.init({{ \Illuminate\Support\Js::from($domainSections->mapWithKeys(fn($section) => [$section['key'] => $section['chart']])) }});
         });
     </script>
 @endpush

@@ -19,6 +19,7 @@ class Finance extends Model
         'description',
         'docserial',
         'finance_type',
+        'idempotency_key',
     ];
 
     public function project(): BelongsTo

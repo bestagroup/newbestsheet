@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Finance;
 use App\Models\Financial_statement;
 use App\Models\Project;
+use App\Support\Monetary;
 use App\Support\LocalizedInputNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -25,7 +26,9 @@ class PortfolioFinancialReportService
         );
         $financialProjectIds = Project::query()
             ->whereIn('id', $visibleProjectIds)
-            ->whereHas('financialStatements')
+            ->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
+            ->where('invest_step', '<', 20)
+            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))
             ->pluck('id');
 
         $records = Financial_statement::query()
@@ -46,9 +49,7 @@ class PortfolioFinancialReportService
                     ];
 
                     foreach (Financial_statement::monetaryFields() as $field) {
-                        $aggregate->{$field} = $periodRows->sum(
-                            fn (Financial_statement $row): float => $this->metrics->number($row->{$field})
-                        );
+                        $aggregate->{$field} = Monetary::sum($periodRows->pluck($field));
                     }
 
                     return $aggregate;
@@ -72,14 +73,14 @@ class PortfolioFinancialReportService
             ->when($toDate, fn ($query) => $query->where('date', '<=', $toDate));
 
         $payments = $financeQuery->get();
-        $totalPaid = (float) $payments->sum(fn (Finance $finance) => $this->metrics->number($finance->amount));
+        $totalPaid = Monetary::sum($payments->pluck('amount'));
 
         $allocation = $payments
             ->groupBy('project_id')
             ->map(function (Collection $items) use ($totalPaid): array {
                 /** @var Finance $first */
                 $first = $items->first();
-                $paid = (float) $items->sum(fn (Finance $finance) => $this->metrics->number($finance->amount));
+                $paid = Monetary::sum($items->pluck('amount'));
 
                 return [
                     'label' => $first->project?->title ?? 'بدون پروژه',
@@ -92,11 +93,13 @@ class PortfolioFinancialReportService
             ->whereIn('id', $financialProjectIds)
             ->with([
                 'company:id,company_name',
-                'financialStatements' => fn ($query) => $query->orderBy('year')->orderBy('month'),
+                'financialStatements' => fn ($query) => $query->filter($request)->orderBy('year')->orderBy('month'),
                 'finances:id,project_id,amount',
                 'currentStep:id,title',
             ])
             ->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
+            ->where('invest_step', '<', 20)
+            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))
             ->when($projectId, fn ($query) => $query->whereKey($projectId))
             ->orderBy('title')
             ->get();
@@ -104,10 +107,8 @@ class PortfolioFinancialReportService
         $riskMap = $this->operationalAnalytics->riskByProjectIds($projects->pluck('id'));
 
         $portfolioRows = $projects->map(function (Project $project) use ($riskMap): array {
-            $paid = (float) $project->finances->sum(
-                fn (Finance $finance) => $this->metrics->number($finance->amount)
-            );
-            $contract = $this->metrics->number($project->amount_request_accept);
+            $paid = Monetary::sum($project->finances->pluck('amount'));
+            $contract = (string) Monetary::value($project->amount_request_accept);
             $statement = $this->metrics->build($project->financialStatements)['summary'];
 
             $risk = $riskMap[(int) $project->id] ?? ['overdue_kpis' => 0, 'overdue_commitments' => 0, 'level' => 'normal'];
@@ -124,7 +125,7 @@ class PortfolioFinancialReportService
                 'risk_level' => $risk['level'],
                 'contract_amount' => $contract,
                 'paid_amount' => $paid,
-                'remaining_amount' => max(0, $contract - $paid),
+                'remaining_amount' => Monetary::difference($contract, $paid, true),
                 'funding_percent' => $contract > 0 ? round(($paid / $contract) * 100, 2) : 0,
                 'latest_period' => $statement['period'],
                 'net_sales' => $statement['net_sales'],
@@ -135,7 +136,7 @@ class PortfolioFinancialReportService
             ];
         });
 
-        $totalContract = (float) $portfolioRows->sum('contract_amount');
+        $totalContract = Monetary::sum($portfolioRows->pluck('contract_amount'));
 
         $reportProjectQuery = Project::query()
             ->whereIn('id', $financialProjectIds);
@@ -166,7 +167,7 @@ class PortfolioFinancialReportService
             'portfolioRows' => $portfolioRows,
             'totalPaid' => $totalPaid,
             'totalContract' => $totalContract,
-            'remainingCommitment' => max(0, $totalContract - $totalPaid),
+            'remainingCommitment' => Monetary::difference($totalContract, $totalPaid, true),
             'reportCounts' => $reportCounts,
         ];
     }

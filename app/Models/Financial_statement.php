@@ -108,6 +108,7 @@ class Financial_statement extends Model
         'project_id',
         'year',
         'month',
+        'period_type',
         ...self::MONETARY_FIELDS,
     ];
 
@@ -139,6 +140,7 @@ class Financial_statement extends Model
         [$toYear, $toMonth] = $this->periodParts($request->input('to_date'));
 
         return $query
+            ->where('period_type', in_array($request->input('period_type'), ['annual', 'quarterly', 'legacy'], true) ? $request->input('period_type') : 'legacy')
             ->when($projectId, fn (Builder $builder) => $builder->where('project_id', (int) $projectId))
             ->when($fromYear, function (Builder $builder) use ($fromYear, $fromMonth): void {
                 $builder->where(function (Builder $period) use ($fromYear, $fromMonth): void {

@@ -1,4 +1,5 @@
 <div class="row g-3">
+<div class="col-md-3"><label class="form-label">شماره سند مالی</label><input required name="docserial" id="{{ $prefix }}docserial" class="form-control"></div>
     <div class="col-md-3">
         <label class="form-label" for="{{ $prefix }}project_id">نام پروژه</label>
         <select name="project_id" id="{{ $prefix }}project_id" class="form-control" required>
@@ -13,7 +14,7 @@
         <input type="text" name="amount" id="{{ $prefix }}amount" class="form-control money-input" inputmode="numeric">
     </div>
     <div class="col-md-3">
-        <label class="form-label" for="{{ $prefix }}serial">شماره سند / شماره چک</label>
+        <label class="form-label" for="{{ $prefix }}serial">شماره مرحله پرداخت (۱ تا ۵)</label>
         <input type="text" name="serial" id="{{ $prefix }}serial" class="form-control">
     </div>
     <div class="col-md-3">

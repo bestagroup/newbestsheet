@@ -26,7 +26,7 @@ use App\Models\User;
 use App\Services\FinancialStatementMetricsService;
 use App\Services\InvestmentWorkflowAccessService;
 use App\Services\InvestmentWorkflowService;
-use Exception;
+use App\Services\ProjectDeletionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -387,33 +387,12 @@ class FlowController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy(int $id, ProjectDeletionService $deletion)
     {
+        abort_unless(auth()->user()->can('can-access', ['project', 'delete']), 403);
         abort_unless(app(InvestmentWorkflowAccessService::class)->canManageAssignments(auth()->user()), 403);
-        try {
-            $project = Project::findOrfail($id);
-            $result = $project->delete();
+        $deletion->delete($id);
 
-            if ($result == true) {
-                $success = true;
-                $flag = 'success';
-                $subject = 'عملیات موفق';
-                $message = 'اطلاعات با موفقیت پاک شد';
-            } elseif ($result != true) {
-                $success = false;
-                $flag = 'error';
-                $subject = 'عملیات نا موفق';
-                $message = 'اطلاعات زیرمنو ثبت نشد، لطفا مجددا تلاش نمایید';
-            }
-
-        } catch (Exception $e) {
-
-            $success = false;
-            $flag = 'error';
-            $subject = 'خطا در ارتباط با سرور';
-            $message = 'اطلاعات پاک نشد،لطفا بعدا مجدد تلاش نمایید ';
-        }
-
-        return response()->json(['success' => $success, 'subject' => $subject, 'flag' => $flag, 'message' => $message]);
+        return response()->json(['success' => true, 'message' => 'پرونده حذف شد.']);
     }
 }

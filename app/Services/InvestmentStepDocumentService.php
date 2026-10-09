@@ -46,9 +46,7 @@ class InvestmentStepDocumentService
                     });
             })
             ->whereIn('scan_status', ['clean', 'legacy'])
-            ->where(function ($query) {
-                $query->whereNull('status')->orWhere('status', '!=', 5);
-            })
+            ->where('status', 4)
             ->get(['id', 'subject_id', 'document_requirement_id', 'project_stage_instance_id']);
 
         return $requirements

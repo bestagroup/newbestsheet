@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\State;
 use App\Models\SubmenuPanel;
 use App\Services\InvestmentWorkflowAccessService;
+use App\Services\ProjectDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,11 +26,11 @@ class ProjectController extends Controller
             $financeSub = DB::table('finances')
                 ->select(
                     'project_id',
-                    DB::raw('MAX(CASE WHEN serial = 1 THEN amount END) as first_stage_payment'),
-                    DB::raw('MAX(CASE WHEN serial = 2 THEN amount END) as second_stage_payment'),
-                    DB::raw('MAX(CASE WHEN serial = 3 THEN amount END) as third_stage_payment'),
-                    DB::raw('MAX(CASE WHEN serial = 4 THEN amount END) as fourth_stage_payment'),
-                    DB::raw('MAX(CASE WHEN serial = 5 THEN amount END) as fifth_stage_payment')
+                    DB::raw('SUM(CASE WHEN serial = 1 THEN amount END) as first_stage_payment'),
+                    DB::raw('SUM(CASE WHEN serial = 2 THEN amount END) as second_stage_payment'),
+                    DB::raw('SUM(CASE WHEN serial = 3 THEN amount END) as third_stage_payment'),
+                    DB::raw('SUM(CASE WHEN serial = 4 THEN amount END) as fourth_stage_payment'),
+                    DB::raw('SUM(CASE WHEN serial = 5 THEN amount END) as fifth_stage_payment')
                 )
                 ->groupBy('project_id');
 
@@ -158,7 +159,7 @@ class ProjectController extends Controller
     {
         try {
             $data = $this->synchronizeCompanySnapshot($request->validated());
-            Project::query()->create($data);
+            DB::transaction(fn () => Project::query()->create($data), 3);
 
             return $this->successResponse('اطلاعات پروژه با موفقیت ثبت شد.');
         } catch (Throwable $exception) {
@@ -170,10 +171,13 @@ class ProjectController extends Controller
 
     public function update(ProjectRequest $request, int $id): JsonResponse
     {
+        abort_unless(app(InvestmentWorkflowAccessService::class)->canViewProject($request->user(), $id), 403);
         try {
             $project = Project::query()->findOrFail($id);
-            $project->fill($this->synchronizeCompanySnapshot($request->validated()))->save();
-            $project->members()->update(['company_id' => $project->company_id]);
+            DB::transaction(function () use ($project, $request): void {
+                $project->fill($this->synchronizeCompanySnapshot($request->validated()))->save();
+                $project->members()->update(['company_id' => $project->company_id]);
+            }, 3);
 
             return $this->successResponse('اطلاعات پروژه با موفقیت به‌روزرسانی شد.');
         } catch (Throwable $exception) {
@@ -186,24 +190,12 @@ class ProjectController extends Controller
         }
     }
 
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request, int $project, ProjectDeletionService $deletion): JsonResponse
     {
-        $validated = $request->validate([
-            'id' => ['required', 'integer', 'exists:projects,id'],
-        ]);
+        abort_unless(app(InvestmentWorkflowAccessService::class)->canViewProject($request->user(), $project), 403);
+        $deletion->delete($project);
 
-        try {
-            Project::query()->findOrFail($validated['id'])->delete();
-
-            return $this->successResponse('اطلاعات پروژه با موفقیت حذف شد.');
-        } catch (Throwable $exception) {
-            Log::error('Project delete failed.', [
-                'exception' => $exception,
-                'project_id' => $validated['id'],
-            ]);
-
-            return $this->errorResponse('اطلاعات پروژه حذف نشد، لطفاً بعداً مجدداً تلاش نمایید.');
-        }
+        return $this->successResponse('پرونده حذف شد.');
     }
 
     private function synchronizeCompanySnapshot(array $data): array

@@ -11,7 +11,7 @@
         <i class="mdi mdi-information-outline mdi-20px mt-1"></i>
         <div>
             <strong>دوره مالی را دقیق انتخاب کنید.</strong>
-            برای صورت مالی سالانه، ماه پایان دوره معمولاً ماه ۱۲ است. هر شرکت در هر دوره فقط یک رکورد می‌تواند داشته باشد.
+            برای صورت مالی سالانه، ماه پایان دوره معمولاً ماه ۱۲ است. نوع سالانه و فصلی مستقل است؛ ارقام فصلی باید مربوط به همان فصل باشند، نه تجمعی.
         </div>
     </div>
 </div>
@@ -53,6 +53,12 @@
     </div>
 </div>
 
+<div class="col-12 col-lg-4"><label class="form-label">نوع دوره</label>
+<select name="period_type" class="form-select" required>
+@foreach(['annual' => 'سالانه', 'quarterly' => 'فصلی', 'legacy' => 'قدیمی / طبقه‌بندی‌نشده'] as $value => $label)
+<option value="{{ $value }}" @selected(old('period_type', data_get($statement, 'period_type', 'annual')) === $value)>{{ $label }}</option>
+@endforeach
+</select></div>
 @foreach($fieldGroups as $groupTitle => $fields)
     <div class="col-12">
         <section class="statement-form-section" aria-labelledby="{{ $idPrefix }}_group_{{ $loop->index }}">

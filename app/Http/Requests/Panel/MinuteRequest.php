@@ -4,6 +4,7 @@ namespace App\Http\Requests\Panel;
 
 use App\Support\LocalizedInputNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class MinuteRequest extends FormRequest
 {
@@ -26,7 +27,7 @@ class MinuteRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'date' => ['nullable', 'string', 'max:20'],
             'type' => ['nullable', 'string', 'max:100'],
-            'file_path' => ['nullable', 'string', 'max:2048'],
+            'file_path' => ['nullable', 'string', 'max:2048', Rule::exists('media_files', 'file_path')->where(fn ($q) => $q->where('project_id', $this->input('project_id'))->whereNull('deleted_at'))],
         ];
     }
 }

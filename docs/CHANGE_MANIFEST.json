@@ -1,0 +1,410 @@
+{
+  "baseline": "bestsheet(1).zip",
+  "release": "RC1",
+  "date": "2026-10-09",
+  "changes": [
+    {
+      "path": ".env.example",
+      "change": "modified",
+      "sha256": "eb5cd03f92d3859c2c78a96b302f391b5840d3dfa12eb902fa45b9b064b624d9"
+    },
+    {
+      "path": ".env.production.example",
+      "change": "modified",
+      "sha256": "286526e6cd918d2db008dbec50861167850f9ac964834d552105f8944503b635"
+    },
+    {
+      "path": "README.md",
+      "change": "modified",
+      "sha256": "17f963af249540c4a2d7701b91dbb6e33719f5bac5b9484f3567783d27cca380"
+    },
+    {
+      "path": "app/Console/Commands/CreateAdministrator.php",
+      "change": "added",
+      "sha256": "2b46e3781ef39a553176c7ff45c22c0b75e86162f84031639a483fa40ca4c49c"
+    },
+    {
+      "path": "app/Console/Commands/ReleaseReadinessCheck.php",
+      "change": "modified",
+      "sha256": "3ee9b694dab3c9563e4f7d15159a76598c8c04920544de35dbe14384214db4a7"
+    },
+    {
+      "path": "app/Console/Commands/ScanDocuments.php",
+      "change": "added",
+      "sha256": "46c8a1c3cfa72ca649130f753bccb727b8439ba7579eb4e96cdb377f8356fb84"
+    },
+    {
+      "path": "app/Console/Kernel.php",
+      "change": "modified",
+      "sha256": "a3f80c7eb9d6308e9d01f2ecd3ae260ade123a6598b60fa7c7e8ca3ccad23aab"
+    },
+    {
+      "path": "app/Events/MessageSent.php",
+      "change": "modified",
+      "sha256": "93fae09abc51f3eec1537609920241a83f2740a731e386dccf69a161cfb4693a"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/CalendarController.php",
+      "change": "modified",
+      "sha256": "c4fa10b552afe0c436aaef553e2077ce25d0c42ec6c4ce195e8b06b5ba8f809f"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/CompanyController.php",
+      "change": "modified",
+      "sha256": "2b79ca64954f015f257aa4aea216da99db0f386515f1fdf305a2fd3aa042e9f7"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/CorrespondenceController.php",
+      "change": "modified",
+      "sha256": "0873b54cbe1b3f2841f5e7b2377d620ffee082f7309b0e832258fcecdf94548f"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/EmployeeController.php",
+      "change": "modified",
+      "sha256": "c09bf63ed0d2dc5e9875a305ac10841fe6a83db7bde5bb8c747333c7be2cf39e"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/ExternalLetterController.php",
+      "change": "added",
+      "sha256": "1234910ac77a06920676b82296d143bd2ed95ab1a638183b748cc7cb3c297e60"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/FilemanagerController.php",
+      "change": "modified",
+      "sha256": "fc7f3aac5240868053cc170dd1b6f7c347864189aaa5fa5e3f02f4ec3d9dde4b"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/FinancialController.php",
+      "change": "modified",
+      "sha256": "d2eb604663d0257846892ddf9c405dbd01b6f258cdd7a3f9cd03ebbae42d374d"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/FinancialstatementController.php",
+      "change": "modified",
+      "sha256": "2389dd8c58e809b83da699d0d98e8d358ef3a2052071691697b23556a78e9d78"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/FlowController.php",
+      "change": "modified",
+      "sha256": "f8b1fd6a258bac4bc10b8f239858fa187628784c9cd3410cfba7a83ddbc107c1"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/MediaDownloadController.php",
+      "change": "modified",
+      "sha256": "99e07f9aa1bb3c6a27e393654d81fc90489d77f3a71a1e932ddd51be55c29642"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/MinuteController.php",
+      "change": "modified",
+      "sha256": "073cedfe15596fe846d9c069665ecfd22933925ce53dd7399225a5f1d1139fad"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/PaidController.php",
+      "change": "modified",
+      "sha256": "1fd85e1ef8a105f2b358c4aa693a8339bf74bb5a8de63dc7cc4a0ca5c84fbea2"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/PaneluserController.php",
+      "change": "modified",
+      "sha256": "f3efa465464e0d876e463d1ca785c6914bcc994f42414574fe0342eaaf113f90"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/PortfolioMeetingController.php",
+      "change": "added",
+      "sha256": "681e3a86cca0a51595ee1bd96cc0e80a853a9f3ce33249e78b5d9667842b4aad"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/ProjectController.php",
+      "change": "modified",
+      "sha256": "757129900f55d401dcde42127b378dd786981ffdc6d0b0a787ad703795f66a18"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/ReceiveController.php",
+      "change": "modified",
+      "sha256": "0d129d0fb03244c33792643c5f007fcfe7f763df9457d724cca79ae0f794bc20"
+    },
+    {
+      "path": "app/Http/Controllers/Panel/ReportController.php",
+      "change": "modified",
+      "sha256": "728929bbff06638b529d7d06d0d48ce17bd97609367a7447f8f0156bbe1f9aa7"
+    },
+    {
+      "path": "app/Http/Middleware/EnsureSystemAdministrator.php",
+      "change": "added",
+      "sha256": "8b7d97c4b28100eebdd878eb9edaa75648995370cd538202dae6f2a352e00579"
+    },
+    {
+      "path": "app/Http/Requests/Panel/AdministrativeAssetRequest.php",
+      "change": "modified",
+      "sha256": "f7ac2e27b172cf4a4408ae47094695b079c66da71fba437f6dc7a2a066fc38ab"
+    },
+    {
+      "path": "app/Http/Requests/Panel/ExternalLetterRequest.php",
+      "change": "added",
+      "sha256": "9a161b26fe9e16f592fa765df67044a8511bb60e57bff7cdaa89b1e1e6416a65"
+    },
+    {
+      "path": "app/Http/Requests/Panel/FinanceRequest.php",
+      "change": "modified",
+      "sha256": "e5d94ec9833c9d595ca77e5b5215851392261da08fa4c479c783444cc09b168f"
+    },
+    {
+      "path": "app/Http/Requests/Panel/FinancialStatementRequest.php",
+      "change": "modified",
+      "sha256": "540734f3bafafe05d48adbbb54daaee03dacb877bdb8d070e64d582ac605a03d"
+    },
+    {
+      "path": "app/Http/Requests/Panel/MinuteRequest.php",
+      "change": "modified",
+      "sha256": "dc8983389abdaf01dff0533a0b1c117f52fecf55eed8cc8e2543d361b8282c18"
+    },
+    {
+      "path": "app/Http/Requests/Panel/PortfolioMeetingRequest.php",
+      "change": "added",
+      "sha256": "b6c7869d5d86c5e09dac29874257bb4bd8176f419d1297d37d2a00e316b5ca08"
+    },
+    {
+      "path": "app/Http/Requests/Panel/ProjectRequest.php",
+      "change": "modified",
+      "sha256": "a54f80e4905902369c57336460001d40b2dae2b14b62582607c797953e16dadb"
+    },
+    {
+      "path": "app/Models/ExternalLetter.php",
+      "change": "added",
+      "sha256": "85546b0998e051b70794f6f4e27ce4746646458cdda3210af0663be67da51c55"
+    },
+    {
+      "path": "app/Models/Finance.php",
+      "change": "modified",
+      "sha256": "df84a55275bedaee9535761e838ca8af9ebabb925db4897500b558aa25d8850f"
+    },
+    {
+      "path": "app/Models/Financial_statement.php",
+      "change": "modified",
+      "sha256": "07912e9ba005a312f37f7abe3f814e4472fe8a53d5b5825c64510fe8a707aabb"
+    },
+    {
+      "path": "app/Models/MeetingResolution.php",
+      "change": "added",
+      "sha256": "0c885bd8285998fa1af471489194cc3b05ec7be8cd16b4abd09e5bed914196d4"
+    },
+    {
+      "path": "app/Models/PortfolioMeeting.php",
+      "change": "added",
+      "sha256": "a55d2b3fcc2965b9ce38946b85abd8d5c5fe7859d19c28af75ba25c69054ecd7"
+    },
+    {
+      "path": "app/Rules/JalaliDate.php",
+      "change": "added",
+      "sha256": "9346316d22dd8d285cee66761085d6c0b855876cab316e542cafc5b2696ae5b3"
+    },
+    {
+      "path": "app/Services/ArchiveAccessService.php",
+      "change": "added",
+      "sha256": "cdc2cd77b116b57bfa3b9ac349c62ca52f4b2144befbf989be37867cd1932e84"
+    },
+    {
+      "path": "app/Services/BusinessAudit.php",
+      "change": "added",
+      "sha256": "957f3dae86c545386f4a71522024e576e290449ba202d355137de736468631fa"
+    },
+    {
+      "path": "app/Services/EnterpriseRecordAccess.php",
+      "change": "added",
+      "sha256": "cf5554d37f8e95b806c2a8411e815434eb28a1e82d1fc23b54afd0de0943fc41"
+    },
+    {
+      "path": "app/Services/ExternalLetterService.php",
+      "change": "added",
+      "sha256": "f56d630003a89b5cfa780bc25995b8dd056a910c848bd792de912974cffbe710"
+    },
+    {
+      "path": "app/Services/FinanceService.php",
+      "change": "added",
+      "sha256": "ce8bb6a9b32d49ae180cf66602a94607cc2bdbad77f662c4bb71b39711cf766b"
+    },
+    {
+      "path": "app/Services/FinancialStatementMetricsService.php",
+      "change": "modified",
+      "sha256": "57f787e01b5a16b4af0cef62f73a143250c97391e1a4c292128b4cb1f673eae6"
+    },
+    {
+      "path": "app/Services/GovernanceReportService.php",
+      "change": "added",
+      "sha256": "e5eb47ff2e7aef4fe75986a9285bfe49faa02ae173c578af4fb04876d7ea02f0"
+    },
+    {
+      "path": "app/Services/GovernanceService.php",
+      "change": "added",
+      "sha256": "b8bbb2cf38100fa7e14d72c04f8c45a56e534df2cdf5b9b2cec1dfbe6d7e0c98"
+    },
+    {
+      "path": "app/Services/InvestmentStepDocumentService.php",
+      "change": "modified",
+      "sha256": "65976c86ff555c3eb575b1ddc88f6e9ba853522c88679a311b17fcf600a3f721"
+    },
+    {
+      "path": "app/Services/PortfolioFinancialReportService.php",
+      "change": "modified",
+      "sha256": "ed78bf6032713164e0d9ee46ed0345aa4b20d5b7a8c449ef10dfaa01514d7ffd"
+    },
+    {
+      "path": "app/Services/ProjectDeletionService.php",
+      "change": "added",
+      "sha256": "d007da12b0815fbb487f6115b4b68f33e76bc47e0477b54d600985d70eb0734e"
+    },
+    {
+      "path": "app/Services/ProjectMediaService.php",
+      "change": "modified",
+      "sha256": "6eb2339d938e6abe002b2c319f3e0b0ef43f132a30c8eca5b832420250cf554c"
+    },
+    {
+      "path": "app/Support/Monetary.php",
+      "change": "added",
+      "sha256": "3a9918654334e472626824e050d5b2ade98d4ee34e023d3e3311bb9290343a37"
+    },
+    {
+      "path": "config/investment.php",
+      "change": "modified",
+      "sha256": "9c4ca54d31cf8b8fd6f1297a4887fec3e07def9fceca5fb73d52d27c4cc8e6ad"
+    },
+    {
+      "path": "config/view.php",
+      "change": "modified",
+      "sha256": "22afad794af51f68e8451b6d4c8219f715aebd88c61f7f171cc79b1d0e3de7b9"
+    },
+    {
+      "path": "database/migrations/2026_10_08_000001_add_business_integrity.php",
+      "change": "added",
+      "sha256": "74540ea73b4679e3956f89db2fc8421c17ad7fdc32aa80d335d8be09a784b220"
+    },
+    {
+      "path": "database/migrations/2026_10_08_000002_create_governance_and_letter_register.php",
+      "change": "added",
+      "sha256": "5fe6022fd7aea7bfeafc6d4d2e94fa90e492e02488fe4e7fe9d65230a66b4291"
+    },
+    {
+      "path": "database/seeders/DatabaseSeeder.php",
+      "change": "modified",
+      "sha256": "52ea06969383de36cf2aabaddb40e98a64176066668895f3beb720aa58208400"
+    },
+    {
+      "path": "database/seeders/EnterpriseModuleSeeder.php",
+      "change": "added",
+      "sha256": "3429cfe58be617cef6379137613647c33e25557ada35aec05d3c55e0713c2106"
+    },
+    {
+      "path": "public/js/payment-idempotency.js",
+      "change": "added",
+      "sha256": "b66f1d420fb4fd38b7cc9d44ad292531e60e50217bd2c3983d10aa975d3f333d"
+    },
+    {
+      "path": "resources/views/panel/archive-trash.blade.php",
+      "change": "added",
+      "sha256": "942fdc9ae4d0f15ae20fceaa2f7d68dcca698bc8046a62a01294a050d1978224"
+    },
+    {
+      "path": "resources/views/panel/correspondence.blade.php",
+      "change": "modified",
+      "sha256": "3082dcef088a29b424f957ee58820d3a4a72f11af0a76637fe6811eb2258292b"
+    },
+    {
+      "path": "resources/views/panel/file_manager.blade.php",
+      "change": "modified",
+      "sha256": "1be5bf8e98195b9ad69169e49ea588f615acdeac18245d9d3ad09c8b776d9d59"
+    },
+    {
+      "path": "resources/views/panel/finance.blade.php",
+      "change": "modified",
+      "sha256": "9a760a59d4be5387d1c2305e1e6e3614a63e3dd5c9b025b08887c59a981faffb"
+    },
+    {
+      "path": "resources/views/panel/governance/form.blade.php",
+      "change": "added",
+      "sha256": "1438fa0e10076516e9894a3e0ed57eecb09facf3284f65062139b2b7ae7dbd62"
+    },
+    {
+      "path": "resources/views/panel/governance/index.blade.php",
+      "change": "added",
+      "sha256": "1ca9e35999fda21c708ae5dc8ac01c5379613c8866383a5e50ee104020945733"
+    },
+    {
+      "path": "resources/views/panel/governance/show.blade.php",
+      "change": "added",
+      "sha256": "46fd7b165d93aa73a6f49df396f9143fbf71fa30b5edcacb61c36e9d41380baf"
+    },
+    {
+      "path": "resources/views/panel/letters/form.blade.php",
+      "change": "added",
+      "sha256": "729a258ac4fe01785c11a56eaaa3dbb71cbd345cf9e09a4452bc4f1b41e297cc"
+    },
+    {
+      "path": "resources/views/panel/letters/index.blade.php",
+      "change": "added",
+      "sha256": "4f233aadfcc741eab659eab217518277147d001e83b533b52e707902210fff2e"
+    },
+    {
+      "path": "resources/views/panel/letters/show.blade.php",
+      "change": "added",
+      "sha256": "81f9a8c88f8a65fe4e2c125d3791f8e4c442a65766224a37e9e2de6a117e54ca"
+    },
+    {
+      "path": "resources/views/panel/paidmanage.blade.php",
+      "change": "modified",
+      "sha256": "277f3e3ad5c637d83e3f11bfa54f417fc248cfa4753f2abfb0a2bc2a5dc7fb67"
+    },
+    {
+      "path": "resources/views/panel/partials/financial-statement-fields.blade.php",
+      "change": "modified",
+      "sha256": "d8e1768f2e2f66aafe662cbb89c7c11e7889461d09ec9d9df4a1a6d96b8060ae"
+    },
+    {
+      "path": "resources/views/panel/partials/governance-report.blade.php",
+      "change": "added",
+      "sha256": "d27fb9facd0011ce1ed7ae141c9d6af1b503ec06d5a6e586f8323900101a635d"
+    },
+    {
+      "path": "resources/views/panel/partials/payment-form.blade.php",
+      "change": "modified",
+      "sha256": "c520d9a57f7dfd0c45eeeb2bcb524808b62a0f9ed542fe76c6fdc2fd4c2257a7"
+    },
+    {
+      "path": "resources/views/panel/report.blade.php",
+      "change": "modified",
+      "sha256": "dabf5928d0f6ceb24604a60d6a1aa75f530747b2082f8bb043e1a0b864fff8ee"
+    },
+    {
+      "path": "routes/web.php",
+      "change": "modified",
+      "sha256": "7392f2f879a54944a9fb75f316469c063972b1dee661745f10af8b9b966af109"
+    },
+    {
+      "path": "tests/Feature/EnterpriseIntegrationTest.php",
+      "change": "added",
+      "sha256": "38a23be4f57eb46b8d3481e47e0abd9a765d2c647ba36eb7104be8dbee57dcf0"
+    },
+    {
+      "path": "tests/Feature/FinancialStatementManagementTest.php",
+      "change": "modified",
+      "sha256": "e28b5539d7aef0c6cca8144489d17092eee9ae844e5148c3f0fa85fd772d97b0"
+    },
+    {
+      "path": "tests/Unit/MonetaryTest.php",
+      "change": "added",
+      "sha256": "52b11aef2c40b554bbf52414d33ca54a4b2c34b03f4b474fe21e143f72fd5a9c"
+    }
+  ],
+  "excluded_from_comparison": [
+    "vendor",
+    "storage",
+    "bootstrap/cache",
+    "docs"
+  ],
+  "packaging_excludes": [
+    ".env and secrets",
+    "runtime logs and caches",
+    "test databases",
+    "git metadata"
+  ],
+  "note": "Original upload preserved. Documentation is new and listed in README."
+}

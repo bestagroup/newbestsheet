@@ -72,8 +72,20 @@
 <div class="row g-3 mb-4">
     <div class="col-lg-6">
         <div class="card h-100 border-0 shadow-sm">
-            <div class="card-header"><h6 class="mb-0 fw-bold">توزیع پیشرفت وزنی پروژه‌ها</h6></div>
-            <div class="card-body"><div class="chart-box"><canvas id="operationalProgressDistributionChart"></canvas></div></div>
+            <div class="card-header">
+                <h6 class="mb-2 fw-bold">مبلغ قرارداد در برابر پرداخت انجام‌شده</h6>
+                <small class="text-muted">حداکثر ۱۰ پرونده پورتفوی فعال با بیشترین مبلغ قرارداد؛ پرداخت تجمعی از ابتدای سرمایه‌گذاری، مستقل از فیلتر تاریخ.</small>
+            </div>
+            <div class="card-body">
+                @if(count($fundingChartRows))
+                    <div style="position: relative; height: {{ max(260, count($fundingChartRows) * 58 + 70) }}px">
+                        <canvas id="portfolioFundingChart" role="img" aria-label="مقایسه مبلغ قرارداد و پرداخت تجمعی پرونده‌های پورتفو"></canvas>
+                    </div>
+                    <small class="text-muted">جزئیات دقیق مبالغ در جدول پورتفو درج شده است. پرداخت بیشتر از قرارداد نیز بدون محدودسازی نمایش داده می‌شود.</small>
+                @else
+                    <p class="text-muted text-center py-5 mb-0">پرونده‌ای برای نمایش در محدوده انتخاب‌شده وجود ندارد.</p>
+                @endif
+            </div>
         </div>
     </div>
     <div class="col-lg-6">

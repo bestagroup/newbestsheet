@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Panel;
 
+use App\Rules\JalaliDate;
 use App\Support\LocalizedInputNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -26,11 +27,12 @@ class FinanceRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'idempotency_key' => [$this->isMethod('POST') ? 'required' : 'nullable', 'uuid'],
             'project_id' => ['required', 'integer', 'exists:projects,id'],
-            'amount' => ['required', 'numeric', 'min:0'],
+            'amount' => ['required', 'regex:/^[1-9][0-9]{0,19}$/'],
             'serial' => ['nullable', 'integer', 'between:1,5'],
-            'docserial' => ['nullable', 'string', 'max:255'],
-            'date' => ['nullable', 'regex:/^\d{4}\/\d{2}\/\d{2}$/'],
+            'docserial' => ['required', 'string', 'max:255'],
+            'date' => ['required', new JalaliDate],
             'description' => ['nullable', 'string', 'max:5000'],
         ];
     }

@@ -42,7 +42,7 @@ class MessageSent implements ShouldBroadcastNow
                 'id' => $this->message->id,
                 'senderId' => $this->message->sender_id,
                 'sender' => $this->message->sender->name,
-                'body' => e($this->message->body),
+                'body' => (string) $this->message->body,
                 'time' => $this->message->created_at->toDateTimeString(),
                 'attachments' => $this->message->attachments->map(fn ($a) => [
                     'id' => $a->id,

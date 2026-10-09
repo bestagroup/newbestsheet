@@ -91,8 +91,18 @@ class ProjectMediaService
 
     public function delete(MediaFile $media): void
     {
-        Storage::disk($media->disk ?: 'public')->delete($media->file_path);
+        $this->assertNotReferenced($media);
         $media->delete();
+    }
+
+    public function assertNotReferenced(MediaFile $media): void
+    {
+        if (\App\Models\PortfolioMeeting::query()->where('media_file_id', $media->id)->exists()
+            || \App\Models\ExternalLetter::query()->where('media_file_id', $media->id)->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => 'این فایل پیوست یک نامه یا صورتجلسه است و حذف یا انتقال آن مجاز نیست.',
+            ]);
+        }
     }
 
     private function typeDirectory(string $mime): string

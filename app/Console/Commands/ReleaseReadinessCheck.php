@@ -32,6 +32,7 @@ class ReleaseReadinessCheck extends Command
             'quarterly_performance_reports', 'kpi_measurements', 'report_definitions',
             'report_runs', 'operational_notification_deliveries', 'notifications',
             'employees', 'employee_documents', 'administrative_assets',
+            'business_audits', 'portfolio_meetings', 'meeting_resolutions', 'external_letters',
         ] as $table) {
             $this->check(Schema::hasTable($table), "{$table} exists.", "{$table} is missing.", $failures);
         }

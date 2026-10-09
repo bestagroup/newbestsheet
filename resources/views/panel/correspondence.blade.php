@@ -164,7 +164,7 @@
                         'name' => $u->name,
                     ]
                 ]),
-                JSON_UNESCAPED_UNICODE
+                JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
             ) !!},
             conversations: {!! json_encode(
                 $conversations->map(function ($c) {
@@ -202,7 +202,7 @@
                         ]
                     ];
                 })->values(),
-                JSON_UNESCAPED_UNICODE
+                JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
             ) !!}
         };
     </script>

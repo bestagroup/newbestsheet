@@ -8,10 +8,11 @@ use App\Models\Finance;
 use App\Models\MenuPanel;
 use App\Models\Project;
 use App\Models\SubmenuPanel;
+use App\Services\FinanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Throwable;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class PaidController extends Controller
@@ -31,7 +32,7 @@ class PaidController extends Controller
                 ]);
 
             return DataTables::of($data)
-                ->editColumn('amount', static fn ($row): string => number_format((float) ($row->amount ?? 0)))
+                ->editColumn('amount', static fn ($row): string => \App\Support\Monetary::format($row->amount))
                 ->addColumn('action', function ($row): string {
                     $base = 'btn btn-sm btn-icon rounded-pill waves-effect mx-1';
                     $buttons = '';
@@ -73,47 +74,25 @@ class PaidController extends Controller
         return response()->json(['data' => $finance]);
     }
 
-    public function store(FinanceRequest $request): JsonResponse
+    public function store(FinanceRequest $request, FinanceService $service): JsonResponse
     {
-        $validated = [...$request->validated(), 'finance_type' => 'vc-investment'];
+        $finance = $service->create($request->validated());
 
-        try {
-            Finance::query()->create($validated);
-
-            return $this->success('پرداخت با موفقیت ثبت شد.');
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $this->failure('ثبت پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
+        return response()->json(['success' => true, 'flag' => 'success', 'subject' => 'عملیات موفق', 'message' => 'پرداخت ثبت شد.', 'id' => $finance->id, 'next_idempotency_key' => (string) Str::uuid()]);
     }
 
-    public function update(FinanceRequest $request, int $id): JsonResponse
+    public function update(FinanceRequest $request, int $id, FinanceService $service): JsonResponse
     {
-        $validated = [...$request->validated(), 'finance_type' => 'vc-investment'];
+        $service->update($id, $request->validated());
 
-        try {
-            Finance::query()->findOrFail($id)->update($validated);
-
-            return $this->success('پرداخت با موفقیت ویرایش شد.');
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $this->failure('ویرایش پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
+        return $this->success('پرداخت ویرایش شد.');
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id, FinanceService $service): JsonResponse
     {
-        try {
-            Finance::query()->findOrFail($id)->delete();
+        $service->delete($id);
 
-            return $this->success('پرداخت با موفقیت حذف شد.');
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return $this->failure('حذف پرداخت انجام نشد. لطفاً مجدداً تلاش نمایید.');
-        }
+        return $this->success('پرداخت حذف و سابقه آن نگهداری شد.');
     }
 
     private function success(string $message): JsonResponse

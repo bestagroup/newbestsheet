@@ -1,0 +1,43 @@
+[
+  {
+    "check": "lint",
+    "files": 340,
+    "exit": false
+  },
+  {
+    "check": "routes",
+    "exit": 0
+  },
+  {
+    "check": "view-cache",
+    "exit": 0
+  },
+  {
+    "check": "config-cache",
+    "exit": 0
+  },
+  {
+    "check": "route-cache",
+    "exit": 0
+  },
+  {
+    "check": "clear-caches",
+    "exit": 0
+  },
+  {
+    "check": "upgrade-baseline",
+    "exit": 0
+  },
+  {
+    "check": "upgrade-seed",
+    "exit": 0
+  },
+  {
+    "check": "upgrade-roles",
+    "exit": 0
+  },
+  {
+    "check": "upgrade-check",
+    "exit": 0
+  }
+]

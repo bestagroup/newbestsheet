@@ -36,6 +36,7 @@ class CalendarController extends Controller
 
     public function getEvents(Request $request): JsonResponse
     {
+        $request->validate(['start' => ['nullable', 'date'], 'end' => ['nullable', 'date', 'after:start'], 'q' => ['nullable', 'string', 'max:255']]);
         $userId = (int) Auth::id();
 
         $query = Calendar::query()

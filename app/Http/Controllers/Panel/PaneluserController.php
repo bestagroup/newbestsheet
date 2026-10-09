@@ -130,6 +130,8 @@ class PaneluserController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
+        $target = User::query()->findOrFail($id);
+        abort_if($target->hasRole(['superadmin', 'manager']) && ! auth()->user()->hasRole('superadmin'), 403);
         try {
             $user = User::query()->where('level', 'admin')->findOrFail($id);
             if ($user->id === auth()->id()) {
@@ -147,6 +149,14 @@ class PaneluserController extends Controller
 
     private function validatePayload(Request $request, ?int $userId = null, bool $passwordRequired = true): array
     {
+        if (! $request->user()->hasRole('superadmin')) {
+            $role = Role::query()->find($request->input('typeuser_id'));
+            abort_if($role && in_array($role->title, ['superadmin', 'manager'], true), 403);
+            if ($userId) {
+                abort_if(User::query()->findOrFail($userId)->hasRole(['superadmin', 'manager']), 403);
+            }
+        }
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:32'],

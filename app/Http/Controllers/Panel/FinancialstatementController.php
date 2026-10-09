@@ -9,6 +9,8 @@ use App\Models\MenuPanel;
 use App\Models\Project;
 use App\Models\SubmenuPanel;
 use App\Services\ActivityLogService;
+use App\Services\BusinessAudit;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -40,7 +42,7 @@ class FinancialstatementController extends Controller
                 ->selectRaw('((f.year * 100) + f.month) as period_sort');
 
             $dataTable = DataTables::of($query)
-                ->addColumn('period', static fn ($row): string => sprintf('%04d/%02d', (int) $row->year, (int) $row->month))
+                ->addColumn('period', static fn ($row): string => sprintf('%04d/%02d', (int) $row->year, (int) $row->month).' — '.(['annual' => 'سالانه', 'quarterly' => 'فصلی', 'legacy' => 'قدیمی'][$row->period_type] ?? 'قدیمی'))
                 ->editColumn('company_name', static fn ($row): string => (string) ($row->company_name ?: $row->project_title ?: '—'))
                 ->filterColumn('company_name', static function ($builder, string $keyword): void {
                     $builder->where(static function ($companyQuery) use ($keyword): void {
@@ -103,7 +105,11 @@ class FinancialstatementController extends Controller
     public function store(FinancialStatementRequest $request, ActivityLogService $activity): JsonResponse
     {
         try {
-            $statement = Financial_statement::query()->create($request->validated());
+            $statement = DB::transaction(function () use ($request) {
+                $statement = Financial_statement::query()->create($request->validated());
+                app(BusinessAudit::class)->record($statement, 'created');
+                return $statement;
+            });
             $activity->record('financial_statement.created', 'صورت مالی #'.$statement->id.' ثبت شد.');
 
             return $this->success('صورت مالی با موفقیت ثبت شد.');
@@ -126,8 +132,13 @@ class FinancialstatementController extends Controller
     public function update(FinancialStatementRequest $request, int $id, ActivityLogService $activity): JsonResponse
     {
         try {
-            $statement = $this->findPortfolioStatementOrFail($id);
-            $statement->update($request->validated());
+            $statement = DB::transaction(function () use ($request, $id) {
+                $statement = $this->findPortfolioStatementOrFail($id, true);
+                $before = $statement->getAttributes();
+                $statement->update($request->validated());
+                app(BusinessAudit::class)->record($statement, 'updated', $before);
+                return $statement;
+            });
             $activity->record('financial_statement.updated', 'صورت مالی #'.$statement->id.' ویرایش شد.');
 
             return $this->success('صورت مالی با موفقیت ویرایش شد.');
@@ -143,8 +154,11 @@ class FinancialstatementController extends Controller
     public function destroy(int $id, ActivityLogService $activity): JsonResponse
     {
         try {
-            $statement = $this->findPortfolioStatementOrFail($id);
-            $statement->delete();
+            DB::transaction(function () use ($id) {
+                $statement = $this->findPortfolioStatementOrFail($id, true);
+                app(BusinessAudit::class)->record($statement, 'deleted', $statement->getAttributes());
+                $statement->delete();
+            });
             $activity->record('financial_statement.deleted', 'صورت مالی #'.$id.' حذف شد.');
 
             return $this->success('صورت مالی با موفقیت حذف شد.');
@@ -185,10 +199,11 @@ class FinancialstatementController extends Controller
             ->get(['id', 'title', 'company_name']);
     }
 
-    private function findPortfolioStatementOrFail(int $id): Financial_statement
+    private function findPortfolioStatementOrFail(int $id, bool $lock = false): Financial_statement
     {
         return Financial_statement::query()
             ->whereKey($id)
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->whereHas('project', static fn ($query) => $query->where(
                 'invest_step',
                 '>=',

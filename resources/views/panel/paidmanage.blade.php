@@ -63,6 +63,7 @@
                 <div class="modal-body">
                     <form id="addform" action="{{ route('paidmanage.store') }}" method="POST">
                         @csrf
+<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                         @include('panel.partials.payment-form', ['prefix' => 'add_', 'projects' => $projects])
                         <div class="text-end mt-3">
                             <button type="submit" class="btn btn-primary">ذخیره اطلاعات</button>
@@ -83,6 +84,7 @@
                 <div class="modal-body">
                     <form id="editform" method="POST">
                         @csrf
+<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                         @method('PATCH')
                         @include('panel.partials.payment-form', ['prefix' => 'edit_', 'projects' => $projects])
                         <div class="text-end mt-3">
@@ -96,6 +98,7 @@
 @endsection
 
 @section('script')
+<script src="{{ asset('js/payment-idempotency.js') }}"></script>
     <script src="{{ asset('assets/vendor/js/dataTables.min.js') }}"></script>
     <script>
         $(function () {
@@ -141,6 +144,7 @@
                 document.getElementById(prefix + 'project_id').value = finance.project_id ?? '';
                 document.getElementById(prefix + 'amount').value = finance.amount ? Number(finance.amount).toLocaleString('en-US') : '';
                 document.getElementById(prefix + 'serial').value = finance.serial ?? '';
+                document.getElementById(prefix + 'docserial').value = finance.docserial ?? '';
                 document.getElementById(prefix + 'date').value = finance.date ?? '';
                 document.getElementById(prefix + 'description').value = finance.description ?? '';
             }

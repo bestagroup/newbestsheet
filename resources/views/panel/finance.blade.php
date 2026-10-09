@@ -51,6 +51,7 @@
                 <div class="modal-body">
                     <form id="addform" data-type="create" method="POST" class="row g-4 mb-4" action="{{route(request()->segment(2).'.'.'store')}}">
                         @csrf
+<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
                             <div class="col-6 col-md-3">
                                 <div class="form-floating form-floating-outline">
                                     <select required name="project_id" id="project_id" class="form-control select-lg select2">
@@ -129,6 +130,7 @@
 
 @endsection
 @section('script')
+<script src="{{ asset('js/payment-idempotency.js') }}"></script>
     <script src="{{ asset('assets/vendor/js/dataTables.min.js') }}"></script>
 
     <script src="{{ asset('assets/vendor/js/formhandler.js') }}"></script>

@@ -44,7 +44,7 @@ class AdministrativeAssetRequest extends FormRequest
             'acquisition_date' => ['nullable', 'string', 'max:20'],
             'purchase_cost' => ['nullable', 'integer', 'min:0'],
             'location' => ['nullable', 'string', 'max:255'],
-            'custodian_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'custodian_employee_id' => ['nullable', 'integer', Rule::exists('employees', 'id')->whereNull('deleted_at')->where('status', 'active')],
             'condition' => ['required', Rule::in(array_keys(AdministrativeAsset::conditionLabels()))],
             'status' => ['required', Rule::in(array_keys(AdministrativeAsset::statusLabels()))],
             'notes' => ['nullable', 'string', 'max:5000'],

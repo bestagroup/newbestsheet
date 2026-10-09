@@ -128,11 +128,11 @@ class FinancialStatementMetricsService
 
         return [
             'period' => sprintf('%04d/%02d', (int) $latest->year, (int) $latest->month),
-            'net_sales' => $netSales,
-            'net_profit' => $netProfit,
-            'total_assets' => $totalAssets,
-            'total_equity' => $totalEquity,
-            'total_liabilities' => $totalLiabilities,
+            'net_sales' => (string) \App\Support\Monetary::value($latest->net_sales),
+            'net_profit' => (string) \App\Support\Monetary::value($latest->net_profit),
+            'total_assets' => (string) \App\Support\Monetary::value($latest->total_assets),
+            'total_equity' => (string) \App\Support\Monetary::value($latest->total_equity),
+            'total_liabilities' => (string) \App\Support\Monetary::value($latest->total_liabilities),
             'current_ratio' => $this->ratio(
                 $this->number($latest->total_current_assets),
                 $this->number($latest->total_current_liabilities)
@@ -141,10 +141,7 @@ class FinancialStatementMetricsService
             'roa' => $this->percent($netProfit, $totalAssets),
             'sales_growth' => $previous ? $this->growth($netSales, $this->number($previous->net_sales)) : null,
             'profit_growth' => $previous ? $this->growth($netProfit, $this->number($previous->net_profit)) : null,
-            'balance_difference' => round(
-                $totalAssets - $this->number($latest->total_equity_and_liabilities),
-                2
-            ),
+            'balance_difference' => \App\Support\Monetary::difference($latest->total_assets, $latest->total_equity_and_liabilities),
         ];
     }
 

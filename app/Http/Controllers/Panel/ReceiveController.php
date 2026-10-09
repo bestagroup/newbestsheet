@@ -26,7 +26,7 @@ class ReceiveController extends Controller
                 ]);
 
             return DataTables::of($data)
-                ->editColumn('amount', static fn ($row): string => number_format((float) ($row->amount ?? 0)))
+                ->editColumn('amount', static fn ($row): string => \App\Support\Monetary::format($row->amount))
                 ->make(true);
         }
 

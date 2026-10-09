@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="{{ asset('assets/vendor/css/rtl/dataTables.dataTables.min.css') }}"/>
 @endsection
 @section('content')
+@php
+    $fundingChartRows = collect($portfolioRows ?? [])
+        ->sort(fn ($a, $b) => \App\Support\Monetary::value($b['contract_amount'])
+            ->compareTo(\App\Support\Monetary::value($a['contract_amount'])))
+        ->take(10)->values()->all();
+@endphp
+@include('panel.partials.governance-report')
     <style>
         .report-wrap { direction: rtl; }
         .report-title { margin-bottom: 6px; font-weight: 700; }
@@ -75,26 +82,30 @@
             </div>
         </div>
 
-        {{-- شاخص‌های کلان پورتفو --}}
         <div class="kpi-row">
-            <div class="kpi-col"><div class="card kpi-card bg-label-primary"><div class="card-content text-center"><p class="kpi-value">{{ number_format($reportCounts['projects']) }}</p><p class="kpi-label">کل طرح‌های ثبت‌شده</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card bg-label-danger"><div class="card-content text-center"><p class="kpi-value">{{ number_format($reportCounts['rejected']) }}</p><p class="kpi-label">طرح‌های ردشده</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card bg-label-info"><div class="card-content text-center"><p class="kpi-value">{{ number_format($reportCounts['active']) }}</p><p class="kpi-label">طرح‌های جاری</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card bg-label-success"><div class="card-content text-center"><p class="kpi-value">{{ number_format($reportCounts['completed']) }}</p><p class="kpi-label">طرح‌های تکمیل‌شده</p></div></div></div>
+            @foreach(['projects' => 'کل طرح‌های ثبت‌شده', 'active' => 'کل طرح‌های جاری', 'rejected' => 'کل طرح‌های ردشده', 'portfolio' => 'کل طرح‌های فعال پورتفو'] as $key => $label)
+                <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ number_format($investmentSummary['counts'][$key]) }}</p><p class="kpi-label">{{ $label }}</p></div></div></div>
+            @endforeach
         </div>
-
-        {{-- شاخص‌های مالی --}}
+        <p class="text-muted small">شمارنده‌ها شامل تمام طرح‌های سامانه و مستقل از فیلترها هستند؛ طرح جاری: ردنشده قبل از مرحله ۶؛ پورتفوی فعال: مراحل ۱۴ تا ۱۹ و ردنشده. این گروه‌ها جمع‌پذیر نیستند.</p>
         <div class="kpi-row">
-            <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ number_format($totalContract) }}</p><p class="kpi-label">ارزش قراردادهای پورتفو</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ number_format($totalPaid) }}</p><p class="kpi-label">سرمایه پرداخت‌شده</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ number_format($remainingCommitment) }}</p><p class="kpi-label">مانده تعهد سرمایه‌گذاری</p></div></div></div>
-            <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ number_format($financialSummary['net_profit']) }}</p><p class="kpi-label">سود/زیان خالص آخرین دوره{{ $financialSummary['period'] ? ' - '.$financialSummary['period'] : '' }}</p></div></div></div>
+            @foreach(['contract' => 'کل مبلغ قراردادها', 'paid' => 'کل مبلغ پرداخت‌شده', 'remaining' => 'کل مبلغ مانده تعهدات'] as $key => $label)
+                <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center"><p class="kpi-value">{{ \App\Support\Monetary::format($investmentSummary[$key]) }}</p><p class="kpi-label">{{ $label }}</p><small class="text-muted">ریال</small></div></div></div>
+            @endforeach
+            <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center">
+                <p class="kpi-value">{{ $investmentSummary['profit'] === null ? '—' : \App\Support\Monetary::format($investmentSummary['profit']) }}</p>
+                <p class="kpi-label">سود و زیان آخرین دوره کل شرکت‌ها</p>
+                <small class="text-muted">ریال؛ {{ $investmentSummary['reported_companies'] }} شرکت دارای صورت مالی و {{ $investmentSummary['missing_companies'] }} شرکت فاقد صورت مالی از نوع انتخاب‌شده</small>
+                @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">آخرین دوره شرکت‌ها یکسان نیست.</small>@endif
+            </div></div></div>
         </div>
+        <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین صورت مالی هر شرکت از نوع دوره انتخاب‌شده است. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
 
         @include('panel.partials.operational-report')
         <div class="card" style="margin:15px;padding: 40px;">
             <div class="card-content">
                 <form method="GET" action="{{ route('report.index') }}">
+<label class="form-label">نوع دوره صورت مالی</label><select name="period_type" class="form-select mb-3">@foreach(['legacy'=>'قدیمی / طبقه‌بندی‌نشده','annual'=>'سالانه','quarterly'=>'فصلی'] as $key=>$label)<option value="{{ $key }}" @selected(request('period_type','legacy')===$key)>{{ $label }}</option>@endforeach</select>
                     <div class="row">
 
                         {{-- شرکت --}}
@@ -298,13 +309,13 @@
                                         <span class="badge bg-label-success">عادی</span>
                                     @endif
                                 </td>
-                                <td>{{ number_format($row['contract_amount']) }}</td>
-                                <td>{{ number_format($row['paid_amount']) }}</td>
-                                <td>{{ number_format($row['remaining_amount']) }}</td>
+                                <td>{{ \App\Support\Monetary::format($row['contract_amount']) }}</td>
+                                <td>{{ \App\Support\Monetary::format($row['paid_amount']) }}</td>
+                                <td>{{ \App\Support\Monetary::format($row['remaining_amount']) }}</td>
                                 <td>{{ number_format($row['funding_percent'], 1) }}٪</td>
                                 <td>{{ $row['latest_period'] ?: '—' }}</td>
-                                <td>{{ number_format($row['net_sales']) }}</td>
-                                <td class="{{ $row['net_profit'] < 0 ? 'text-danger' : 'text-success' }}">{{ number_format($row['net_profit']) }}</td>
+                                <td>{{ \App\Support\Monetary::format($row['net_sales']) }}</td>
+                                <td class="{{ $row['net_profit'] < 0 ? 'text-danger' : 'text-success' }}">{{ \App\Support\Monetary::format($row['net_profit']) }}</td>
                                 <td>{{ number_format($row['current_ratio'], 2) }}</td>
                                 <td>{{ number_format($row['debt_to_equity'], 2) }}</td>
                                 <td>{{ number_format($row['roa'], 1) }}٪</td>
@@ -386,19 +397,42 @@
                 }
             };
 
-            const progressDistributionCanvas = document.getElementById('operationalProgressDistributionChart');
-            if (progressDistributionCanvas) {
-                new Chart(progressDistributionCanvas, {
-                    type: 'doughnut',
+            const fundingCanvas = document.getElementById('portfolioFundingChart');
+            if (fundingCanvas) {
+                const rows = {{ Illuminate\Support\Js::from($fundingChartRows) }};
+                const formatRial = value => String(value || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '٬').replace(/\d/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]) + ' ریال';
+                new Chart(fundingCanvas, {
+                    type: 'bar',
                     data: {
-                        labels: @json($operationalAnalytics['progress_distribution']['labels'] ?? []),
-                        datasets: [{
-                            data: @json($operationalAnalytics['progress_distribution']['data'] ?? []),
-                            backgroundColor: ['rgba(14,165,233,.85)','rgba(99,102,241,.85)','rgba(16,185,129,.85)','rgba(249,115,22,.85)','rgba(34,197,94,.85)','rgba(244,63,94,.80)'],
-                            borderWidth: 0
-                        }]
+                        labels: rows.map(row => row.project_title),
+                        datasets: [
+                            {label: 'مبلغ قرارداد', data: rows.map(row => Number(row.contract_amount) / 1e9), backgroundColor: '#183153', borderRadius: 4},
+                            {label: 'پرداخت انجام‌شده', data: rows.map(row => Number(row.paid_amount) / 1e9), backgroundColor: '#16866b', borderRadius: 4}
+                        ]
                     },
-                    options: {responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: {legend: {position: 'bottom'}}}
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        interaction: {mode: 'index', intersect: false},
+                        plugins: {
+                            legend: {position: 'bottom', rtl: true},
+                            tooltip: {
+                                rtl: true,
+                                callbacks: {
+                                    title: items => items.length ? rows[items[0].dataIndex].project_title : '',
+                                    label: context => context.dataset.label + ': ' + formatRial(rows[context.dataIndex][context.datasetIndex === 0 ? 'contract_amount' : 'paid_amount'])
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {beginAtZero: true, title: {display: true, text: 'میلیارد ریال'}, ticks: {callback: value => Number(value).toLocaleString('fa-IR')}},
+                            y: {grid: {display: false}, ticks: {autoSkip: false, callback: function(value) {
+                                const label = this.getLabelForValue(value);
+                                return label.length > 30 ? label.slice(0, 30) + '…' : label;
+                            }}}
+                        }
+                    }
                 });
             }
 

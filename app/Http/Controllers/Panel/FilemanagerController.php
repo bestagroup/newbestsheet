@@ -8,7 +8,9 @@ use App\Models\MenuPanel;
 use App\Models\Project;
 use App\Models\subject_file;
 use App\Models\SubmenuPanel;
+use App\Services\ArchiveAccessService;
 use App\Services\InvestmentWorkflowAccessService;
+use App\Services\MediaFileStorageLocator;
 use App\Services\ProjectMediaService;
 use Exception;
 use Illuminate\Http\Request;
@@ -35,8 +37,7 @@ class FilemanagerController extends Controller
             $data = MediaFile::leftjoin('projects', 'projects.id', '=', 'media_files.project_id')
                 ->leftjoin('subject_files', 'subject_files.id', '=', 'media_files.subject_id')
                 ->select('media_files.id', 'media_files.file_path', 'media_files.name', 'media_files.original_name', 'media_files.type', 'media_files.size', 'media_files.updated_at', 'projects.title', 'projects.company_name', 'subject_files.title as step');
-            app(InvestmentWorkflowAccessService::class)
-                ->scopeWorkflowProjects($data, $request->user(), 'projects');
+            app(ArchiveAccessService::class)->scope($data, $request->user());
 
             return DataTables::of($data)
                 ->addColumn('file_path', function ($data) {
@@ -46,14 +47,14 @@ class FilemanagerController extends Controller
                         return '<img src="'.$fileUrl.'" alt="تصویر" style="width: 80px; height: auto;">';
                     } elseif ($data->type === 'audio') {
                         return '<audio controls style="width: 150px;"><source src="'.$fileUrl.'" type="audio/mpeg">مرورگر شما از پخش صوت پشتیبانی نمی‌کند.</audio>';
-                    } elseif ($data->type === 'videos') {
+                    } elseif ($data->type === 'video') {
                         return '<video width="160" height="90" controls><source src="'.$fileUrl.'" type="video/mp4">مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.</video>';
                     } else {
                         return '<a href="'.$fileUrl.'" target="_blank">'.'دانلود فایل'.'</a>';
                     }
                 })
                 ->addColumn('name', function ($data) {
-                    return $data->name;
+                    return $data->name.' (#'.$data->id.')';
                 })
                 ->addColumn('step', function ($data) {
                     return $data->step;
@@ -112,7 +113,10 @@ class FilemanagerController extends Controller
                 ->make(true);
         }
 
-        return view('panel.file_manager')->with(compact(['menupanels', 'submenupanels', 'thispage']));
+        $projects = app(InvestmentWorkflowAccessService::class)->scopeWorkflowProjects(Project::query(), $request->user())->get(['id', 'title']);
+        $subjects = subject_file::query()->orderBy('title')->get(['id', 'title']);
+
+        return view('panel.file_manager', compact('menupanels', 'submenupanels', 'thispage', 'projects', 'subjects'));
     }
 
     public function store(Request $request, ProjectMediaService $mediaService)
@@ -157,10 +161,7 @@ class FilemanagerController extends Controller
     {
         $mediafile = MediaFile::query()->findOrFail($id);
         abort_unless(
-            ! $mediafile->project_id || app(InvestmentWorkflowAccessService::class)->canViewProject(
-                auth()->user(),
-                (int) $mediafile->project_id
-            ),
+            app(ArchiveAccessService::class)->allows($mediafile, auth()->user()),
             403
         );
         $subject_files = subject_file::query()->orderBy('title')->get(['id', 'title']);
@@ -177,10 +178,7 @@ class FilemanagerController extends Controller
     {
         $media = MediaFile::findOrFail($id);
         abort_unless(
-            ! $media->project_id || app(InvestmentWorkflowAccessService::class)->canViewProject(
-                auth()->user(),
-                (int) $media->project_id
-            ),
+            app(ArchiveAccessService::class)->allows($media, auth()->user()),
             403
         );
 
@@ -199,6 +197,8 @@ class FilemanagerController extends Controller
                 $subject = 'عملیات نا موفق';
                 $message = 'اطلاعات زیرمنو ثبت نشد، لطفا مجددا تلاش نمایید';
             }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             $success = false;
             $flag = 'error';
@@ -237,10 +237,7 @@ class FilemanagerController extends Controller
         $validated = $request->validate(['id' => ['required', 'integer', 'exists:media_files,id']]);
         $file = MediaFile::findOrFail($validated['id']);
         abort_unless(
-            ! $file->project_id || app(InvestmentWorkflowAccessService::class)->canViewProject(
-                $request->user(),
-                (int) $file->project_id
-            ),
+            app(ArchiveAccessService::class)->allows($file, $request->user()),
             403
         );
         $mediaService->delete($file);
@@ -256,10 +253,7 @@ class FilemanagerController extends Controller
         ]);
         $file = MediaFile::query()->findOrFail($validated['id']);
         abort_unless(
-            ! $file->project_id || app(InvestmentWorkflowAccessService::class)->canViewProject(
-                $request->user(),
-                (int) $file->project_id
-            ),
+            app(ArchiveAccessService::class)->allows($file, $request->user()),
             403
         );
 
@@ -277,6 +271,8 @@ class FilemanagerController extends Controller
                 $subject = 'عملیات نا موفق';
                 $message = 'اطلاعات زیرمنو ثبت نشد، لطفا مجددا تلاش نمایید';
             }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             $success = false;
             $flag = 'error';
@@ -297,10 +293,7 @@ class FilemanagerController extends Controller
         $media = MediaFile::query()->findOrFail($id);
         $project = Project::query()->select('id', 'company_id')->findOrFail($validated['project_id']);
         abort_unless(
-            ! $media->project_id || app(InvestmentWorkflowAccessService::class)->canViewProject(
-                $request->user(),
-                (int) $media->project_id
-            ),
+            app(ArchiveAccessService::class)->allows($media, $request->user()),
             403
         );
         abort_unless(app(InvestmentWorkflowAccessService::class)->canViewProject(
@@ -308,6 +301,10 @@ class FilemanagerController extends Controller
             (int) $project->getKey()
         ), 403);
 
+        if ((int) $media->project_id !== (int) $project->id || (int) $media->subject_id !== (int) ($validated['subject_id'] ?? 0)) {
+            app(ProjectMediaService::class)->assertNotReferenced($media);
+            abort_if($media->document_requirement_id || $media->project_stage_instance_id, 409, 'مدرک متصل به مرحله قابل انتقال یا تغییر دسته نیست.');
+        }
         $media->fill([
             'subject_id' => $validated['subject_id'] ?? null,
             'project_id' => $project->id,
@@ -342,14 +339,14 @@ class FilemanagerController extends Controller
                         return '<img src="'.$fileUrl.'" alt="تصویر" style="width: 80px; height: auto;">';
                     } elseif ($data->type === 'audio') {
                         return '<audio controls style="width: 150px;"><source src="'.$fileUrl.'" type="audio/mpeg">مرورگر شما از پخش صوت پشتیبانی نمی‌کند.</audio>';
-                    } elseif ($data->type === 'videos') {
+                    } elseif ($data->type === 'video') {
                         return '<video width="160" height="90" controls><source src="'.$fileUrl.'" type="video/mp4">مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.</video>';
                     } else {
                         return '<a href="'.$fileUrl.'" target="_blank">'.'دانلود فایل'.'</a>';
                     }
                 })
                 ->addColumn('name', function ($data) {
-                    return $data->name;
+                    return $data->name.' (#'.$data->id.')';
                 })
                 ->addColumn('step', function ($data) {
                     return $data->step;
@@ -386,5 +383,22 @@ class FilemanagerController extends Controller
                 ->rawColumns(['file_path'])
                 ->make(true);
         }
+    }
+
+    public function trash(Request $request)
+    {
+        $files = app(ArchiveAccessService::class)->scope(MediaFile::onlyTrashed(), $request->user())->latest('deleted_at')->paginate(20);
+
+        return view('panel.archive-trash', compact('files'));
+    }
+
+    public function restore(Request $request, int $id)
+    {
+        $media = MediaFile::onlyTrashed()->findOrFail($id);
+        abort_unless(app(ArchiveAccessService::class)->allows($media, $request->user()), 403);
+        abort_unless(app(MediaFileStorageLocator::class)->locate($media), 409, 'فایل فیزیکی موجود نیست؛ بازیابی نسخه پشتیبان لازم است.');
+        $media->restore();
+
+        return back()->with('success', 'فایل بازیابی شد.');
     }
 }

@@ -135,25 +135,13 @@ class CompanyController extends Controller
         }
     }
 
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request, int $company): JsonResponse
     {
-        $validated = $request->validate([
-            'id' => ['required', 'integer', 'exists:companies,id'],
-        ]);
+        $record = Company::query()->findOrFail($company);
+        abort_if($record->project()->exists() || $record->minute()->exists() || $record->MediaFile()->exists(), 409, 'شرکت دارای پرونده یا مستند است.');
+        $record->delete();
 
-        try {
-            Company::query()->findOrFail($validated['id'])->delete();
-
-            return $this->successResponse('اطلاعات شرکت با موفقیت حذف شد.');
-        } catch (Throwable $exception) {
-            Log::error('Company delete failed.', [
-                'exception' => $exception,
-                'company_id' => $validated['id'],
-                'user_id' => Auth::id(),
-            ]);
-
-            return $this->errorResponse('اطلاعات شرکت حذف نشد، لطفاً بعداً مجدداً تلاش نمایید.');
-        }
+        return $this->successResponse('شرکت حذف شد.');
     }
 
     private function successResponse(string $message): JsonResponse

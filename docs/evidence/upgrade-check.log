@@ -1,0 +1,11 @@
+
+   INFO  Running migrations.  
+
+  2026_10_08_000001_add_business_integrity ....................... 8.26ms DONE
+
+
+   INFO  Running migrations.  
+
+  2026_10_08_000002_create_governance_and_letter_register ........ 8.26ms DONE
+
+PASS: legacy amounts preserved, legacy classification applied, annual/legacy coexist.

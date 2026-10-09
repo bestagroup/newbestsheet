@@ -238,6 +238,11 @@ class CorrespondenceController extends Controller
 
         $data = DB::table('messages as m')
             ->join('conversations as c', 'c.id', '=', 'm.conversation_id')
+            ->whereExists(function ($query) use ($request): void {
+                $query->selectRaw('1')->from('conversation_user as viewer')
+                    ->whereColumn('viewer.conversation_id', 'c.id')
+                    ->where('viewer.user_id', $request->user()->getKey());
+            })
             ->join('conversation_user as cu', function ($join) use ($project) {
                 $join->on('cu.conversation_id', '=', 'c.id')
                     ->where('cu.user_id', '=', $project->user_id);
@@ -310,7 +315,7 @@ class CorrespondenceController extends Controller
         $mapMessage = static fn (Message $message): array => [
             'id' => 'm'.$message->id,
             'senderId' => $message->sender_id,
-            'body' => e((string) $message->body),
+            'body' => (string) $message->body,
             'time' => $message->created_at,
             'attachments' => $message->attachments->map(fn (MessageAttachment $attachment) => [
                 'id' => $attachment->id,
@@ -321,7 +326,7 @@ class CorrespondenceController extends Controller
 
         return [
             'id' => $conversation->id,
-            'subject' => e((string) $conversation->subject),
+            'subject' => (string) $conversation->subject,
             'participants' => $conversation->users->pluck('id')->all(),
             'unread' => (int) ($conversation->current_unread_count ?? 0),
             'readUrl' => route('correspondence.read', $conversation->id),
