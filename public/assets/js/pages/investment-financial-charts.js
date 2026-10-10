@@ -20,6 +20,7 @@ window.BestsheetFinancialCharts = (() => {
                     label: series.label,
                     data: series.values.map(value => value === null ? null : Number(value) / scale),
                     borderColor: series.color,
+                    borderDash: series.dash || [], pointStyle: series.point || 'circle',
                     backgroundColor: chart.type === 'line' ? series.color : series.values.map(value => value !== null && Number(value) < 0 ? '#c84558' : series.color),
                     borderWidth: chart.type === 'line' ? 2 : 0,
                     borderRadius: 4, tension: 0, fill: false, spanGaps: false, pointRadius: 3
