@@ -63,6 +63,7 @@ class ReportController extends Controller
             'profitQuality' => $series['profitQuality'],
             'balanceCheck' => $series['balanceCheck'],
             'financialSummary' => $report['summary'],
+            'financialCharts' => $report['charts'],
             'portfolioRows' => $report['portfolioRows'],
             'sectorAllocation' => $report['sectorAllocation'],
             'totalPaid' => $report['totalPaid'],

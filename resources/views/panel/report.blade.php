@@ -106,6 +106,13 @@
             <div class="card-content">
                 <form method="GET" action="{{ route('report.index') }}">
 <label class="form-label">نوع دوره صورت مالی</label><select name="period_type" class="form-select mb-3">@foreach(['legacy'=>'قدیمی / طبقه‌بندی‌نشده','annual'=>'سالانه','quarterly'=>'فصلی'] as $key=>$label)<option value="{{ $key }}" @selected(request('period_type','legacy')===$key)>{{ $label }}</option>@endforeach</select>
+                    <label for="income-basis" class="form-label">مبنای ارقام سود و زیان فصلی</label>
+                    <select id="income-basis" name="income_basis" class="form-select mb-2">
+                        @foreach(['unconfirmed'=>'هنوز تأیید نشده', 'standalone'=>'ارقام مستقل هر فصل', 'ytd'=>'ارقام تجمعی از ابتدای سال مالی'] as $value=>$label)
+                            <option value="{{ $value }}" @selected(request('income_basis', 'unconfirmed') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-muted small">برای نمودار سود و فروش فصلی، مبنای مشترک اسناد شرکت‌های انتخاب‌شده را مشخص کنید؛ این انتخاب فقط فرض گزارش است و داده‌ها را تبدیل یا ویرایش نمی‌کند.</p>
                     <div class="row">
 
                         {{-- شرکت --}}
@@ -143,131 +150,7 @@
                 </form>
             </div>
         </div>
-        {{-- Charts --}}
-        <div class="report-grid">
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>روند فروش خالص</h6></div>
-                        <div class="chart-box">
-                            <canvas id="netSalesChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>توزیع سرمایه‌گذاری در پورتفو</h6></div>
-                        <div class="chart-box">
-                            <canvas id="sectorAllocationChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>نسبت بهای تمام‌شده به فروش</h6></div>
-                        <div class="chart-box">
-                            <canvas id="cogsRatioChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>حاشیه سود ناخالص</h6></div>
-                        <div class="chart-box">
-                            <canvas id="grossMarginChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>نسبت هزینه اداری و فروش</h6></div>
-                        <div class="chart-box">
-                            <canvas id="sgaRatioChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>ترکیب دارایی‌های جاری</h6></div>
-                        <div class="chart-box">
-                            <canvas id="currentAssetRatioChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>نقدینگی (Current Ratio)</h6></div>
-                        <div class="chart-box">
-                            <canvas id="currentRatioChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>ریسک مالی (بدهی به سرمایه)</h6></div>
-                        <div class="chart-box">
-                            <canvas id="debtToEquityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>بازده دارایی (ROA)</h6></div>
-                        <div class="chart-box">
-                            <canvas id="roaChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>کیفیت سود</h6></div>
-                        <div class="chart-box">
-                            <canvas id="profitQualityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="report-col">
-                <div class="card report-card hoverable">
-                    <div class="card-content">
-                        <div class="card-head"><h6>کنترل ترازنامه</h6></div>
-                        <div class="chart-box">
-                            <canvas id="balanceCheckChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+        @include('panel.partials.investment-financial-charts')
 
         <div class="card report-card mt-4">
             <div class="card-content">
@@ -291,7 +174,7 @@
                             <th>سود خالص</th>
                             <th>نسبت جاری</th>
                             <th>بدهی/حقوق مالکانه</th>
-                            <th>ROA</th>
+                            <th title="سود خالص تقسیم بر دارایی پایان دوره؛ مبتنی بر متوسط دارایی نیست">سود/دارایی پایان دوره</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -376,6 +259,7 @@
     {{-- labels = بازه زمانی (سال/ماه) --}}
     {{-- ================================ --}}
 
+    <script src="{{ asset('assets/js/pages/investment-financial-charts.js') }}"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             if (!window.Chart) return;
@@ -453,103 +337,7 @@
                 });
             }
 
-            const labels = @json($netSales['labels']);
-
-            const lineChart = (id, data, color, unit) =>
-                new Chart(document.getElementById(id), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            borderColor: color,
-                            backgroundColor: color.replace('1)', '.12)'),
-                            fill: true,
-                            tension: .35,
-                            pointRadius: 2
-                        }]
-                    },
-                    options: {
-                        ...baseOptions,
-                        scales: {
-                            ...baseOptions.scales,
-                            y: {
-                                ...baseOptions.scales.y,
-                                beginAtZero: false, // مهم برای نمایش منفی‌ها
-                                title: { display: true, text: unit }
-                            }
-                        }
-                    },
-                    plugins: [{
-                        id: 'force-ltr',
-                        beforeInit: chart => {
-                            chart.ctx.canvas.style.direction = 'ltr';
-                        }
-                    }]
-                });
-
-            const barChart = (id, data, color, unit) =>
-                new Chart(document.getElementById(id), {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: color,
-                            borderRadius: 10
-                        }]
-                    },
-                    options: {
-                        ...baseOptions,
-                        scales: {
-                            ...baseOptions.scales,
-                            y: {
-                                ...baseOptions.scales.y,
-                                beginAtZero: false, // مقادیر منفی را به درستی نمایش دهد
-                                title: { display: true, text: unit }
-                            }
-                        }
-                    },
-                    plugins: [{
-                        id: 'force-ltr',
-                        beforeInit: chart => {
-                            chart.ctx.canvas.style.direction = 'ltr';
-                        }
-                    }]
-                });
-
-            new Chart(document.getElementById('sectorAllocationChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: @json($sectorAllocation['labels']),
-                    datasets: [{
-                        data: @json($sectorAllocation['data']),
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: { callbacks: { label: context => `${context.label}: ${context.raw}%` } }
-                    }
-                }
-            });
-
-            // ================================
-            // KPI Charts با واحد اندازه‌گیری
-            // ================================
-            lineChart('netSalesChart',          @json($netSales['data']),          'rgba(14,165,233,1)', 'ریال');
-            lineChart('cogsRatioChart',         @json($cogsRatio['data']),         'rgba(244,63,94,1)', 'درصد');
-            lineChart('grossMarginChart',       @json($grossMargin['data']),       'rgba(16,185,129,1)', 'درصد');
-            barChart ('sgaRatioChart',          @json($sgaRatio['data']),          'rgba(99,102,241,.85)', 'درصد');
-            lineChart('currentAssetRatioChart', @json($currentAssetRatio['data']), 'rgba(14,165,233,1)', 'درصد');
-            lineChart('currentRatioChart',      @json($currentRatio['data']),      'rgba(16,185,129,1)', 'نسبت');
-            barChart ('debtToEquityChart',      @json($debtToEquity['data']),      'rgba(249,115,22,.85)', 'نسبت');
-            lineChart('roaChart',               @json($roa['data']),               'rgba(99,102,241,1)', 'درصد');
-            lineChart('profitQualityChart',     @json($profitQuality['data']),     'rgba(14,165,233,1)', 'درصد');
-            barChart ('balanceCheckChart',      @json($balanceCheck['data']),      'rgba(244,63,94,.75)', 'ریال');
+            window.BestsheetFinancialCharts.init({{ \Illuminate\Support\Js::from($financialCharts['charts']) }});
 
             if (window.jQuery && jQuery.fn.DataTable && document.getElementById('expertPerformanceTable')) {
                 jQuery('#expertPerformanceTable').DataTable({

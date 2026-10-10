@@ -38,6 +38,8 @@ class PortfolioFinancialReportService
             ->orderBy('month')
             ->get();
 
+        $chartRecords = $records;
+
         if (! $projectId) {
             $records = $records
                 ->groupBy(fn (Financial_statement $row): string => sprintf('%04d-%02d', $row->year, $row->month))
@@ -158,6 +160,7 @@ class PortfolioFinancialReportService
         ];
 
         return [
+            'charts' => app(InvestmentFinancialChartsService::class)->build($request, $projects, $chartRecords, $projects->flatMap(fn ($p) => $p->finances)),
             'series' => $metrics['series'],
             'summary' => $metrics['summary'],
             'sectorAllocation' => [

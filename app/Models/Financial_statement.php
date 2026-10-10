@@ -168,6 +168,7 @@ class Financial_statement extends Model
             return [null, null];
         }
 
+        $value = \App\Support\LocalizedInputNormalizer::jalaliDate($value);
         $value = str_replace(['-', '.'], '/', trim($value));
 
         if (preg_match('/^(\d{4})\/(\d{1,2})/', $value, $matches)) {

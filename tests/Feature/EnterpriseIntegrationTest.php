@@ -416,4 +416,22 @@ class EnterpriseIntegrationTest extends TestCase
         $this->assertTrue($result['mixed_periods']);
         $this->assertNull($service->build($this->admin, 'quarterly')['profit']);
     }
+
+    public function test_report_financial_charts_render_filtered_periods_and_exclude_inactive_portfolio(): void
+    {
+        $active = $this->project(14);
+        $exited = $this->project(20);
+        $rejected = $this->project(16);
+        $rejected->update(['is_rejected' => 1]);
+        foreach ([$active, $exited, $rejected] as $project) {
+            foreach ([1404, 1405] as $year) {
+                Financial_statement::query()->create(['project_id'=>$project->id, 'period_type'=>'annual', 'year'=>$year, 'month'=>12, 'net_sales'=>'100', 'net_profit'=>'-20']);
+            }
+        }
+        $this->get('/panel/report?'.http_build_query(['period_type'=>'annual','from_date'=>'۱۴۰۵/۰۱/۰۱']))
+            ->assertOk()->assertSee('تحلیل مالی پورتفوی فعال')->assertSee('کنترل پوشش اقلام مالی')
+            ->assertViewHas('financialCharts', fn ($data) => $data['expected'] === 1
+                && count($data['periods']) === 1 && $data['periods'][0]['period'] === '1405/12'
+                && $data['periods'][0]['profit'] === '-20');
+    }
 }
