@@ -429,9 +429,35 @@ class EnterpriseIntegrationTest extends TestCase
             }
         }
         $this->get('/panel/report?'.http_build_query(['period_type'=>'annual','from_date'=>'۱۴۰۵/۰۱/۰۱']))
-            ->assertOk()->assertSee('تحلیل مالی پورتفوی فعال')->assertSee('کنترل پوشش اقلام مالی')
+            ->assertOk()->assertSee('گزارش مالی شرکت برای مدیرعامل و هیئت‌مدیره')->assertSee('دوره مالی شرکت')
             ->assertViewHas('financialCharts', fn ($data) => $data['expected'] === 1
                 && count($data['periods']) === 1 && $data['periods'][0]['period'] === '1405/12'
                 && $data['periods'][0]['profit'] === '-20');
+    }
+
+    public function test_board_charts_compare_only_same_company_type_and_period_end(): void
+    {
+        $a = $this->project(14); $b = $this->project(18);
+        foreach ([[1403,6,'quarterly','100'],[1404,6,'quarterly','150'],[1405,6,'quarterly','180'],[1405,12,'annual','900']] as [$year,$month,$type,$sales]) {
+            Financial_statement::query()->create(['project_id'=>$a->id,'year'=>$year,'month'=>$month,'period_type'=>$type,'net_sales'=>$sales,'net_profit'=>'-10','gross_profit'=>'20','total_current_liabilities'=>'0']);
+        }
+        Financial_statement::query()->create(['project_id'=>$b->id,'year'=>1405,'month'=>6,'period_type'=>'quarterly','net_sales'=>'99999']);
+        $this->get('/panel/report?'.http_build_query(['chart_company'=>'project:'.$a->id,'chart_period'=>'quarterly:1405:6']))->assertOk()
+            ->assertDontSee('name="income_basis"',false)->assertDontSee('name="from_date"',false)->assertDontSee('name="period_type"',false)
+            ->assertViewHas('boardCharts', fn ($data) => count($data['charts']) === 6
+                && $data['charts'][0]['series'][0]['values'] === ['100','150','180']
+                && $data['indicators'][0]['value'] === '20.00'
+                && $data['charts'][2]['series'][0]['values'] === [null,null,null]);
+    }
+
+    public function test_board_charts_keep_gaps_and_reject_inactive_company_selection(): void
+    {
+        $a=$this->project(14);$exited=$this->project(20);
+        foreach ([1403,1405] as $year) {
+            Financial_statement::query()->create(['project_id'=>$a->id,'year'=>$year,'month'=>12,'period_type'=>'annual','net_sales'=>'9007199254740993','net_profit'=>'-50']);
+        }
+        $this->get('/panel/report?'.http_build_query(['chart_company'=>'project:'.$a->id,'chart_period'=>'annual:1405:12']))->assertOk()
+            ->assertViewHas('boardCharts', fn ($data) => $data['charts'][0]['series'][0]['values'] === ['9007199254740993',null,'9007199254740993'] && $data['indicators'][0]['value'] === null);
+        $this->get('/panel/report?'.http_build_query(['chart_company'=>'project:'.$exited->id]))->assertNotFound();
     }
 }

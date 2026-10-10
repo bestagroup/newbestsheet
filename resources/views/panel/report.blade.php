@@ -102,55 +102,7 @@
         <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین صورت مالی هر شرکت از نوع دوره انتخاب‌شده است. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
 
         @include('panel.partials.operational-report')
-        <div class="card" style="margin:15px;padding: 40px;">
-            <div class="card-content">
-                <form method="GET" action="{{ route('report.index') }}">
-<label class="form-label">نوع دوره صورت مالی</label><select name="period_type" class="form-select mb-3">@foreach(['legacy'=>'قدیمی / طبقه‌بندی‌نشده','annual'=>'سالانه','quarterly'=>'فصلی'] as $key=>$label)<option value="{{ $key }}" @selected(request('period_type','legacy')===$key)>{{ $label }}</option>@endforeach</select>
-                    <label for="income-basis" class="form-label">مبنای ارقام سود و زیان فصلی</label>
-                    <select id="income-basis" name="income_basis" class="form-select mb-2">
-                        @foreach(['unconfirmed'=>'هنوز تأیید نشده', 'standalone'=>'ارقام مستقل هر فصل', 'ytd'=>'ارقام تجمعی از ابتدای سال مالی'] as $value=>$label)
-                            <option value="{{ $value }}" @selected(request('income_basis', 'unconfirmed') === $value)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-muted small">برای نمودار سود و فروش فصلی، مبنای مشترک اسناد شرکت‌های انتخاب‌شده را مشخص کنید؛ این انتخاب فقط فرض گزارش است و داده‌ها را تبدیل یا ویرایش نمی‌کند.</p>
-                    <div class="row">
-
-                        {{-- شرکت --}}
-                        {{-- شرکت --}}
-                        <div class="input-field col s12 m4">
-                            <select name="project_id" class="form-control">
-                                <option value="">همه شرکت‌ها</option>
-                                @foreach($companies as $company)
-                                    <option value="{{ $company->id }}"
-                                        {{ request('project_id') == $company->id ? 'selected' : '' }}>
-                                        {{ $company->company_name }} - {{ $company->title }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- از تاریخ --}}
-                        <div class="input-field col s12 m3">
-                            <input type="text" data-jdp class="form-control" autocomplete="off"
-                                   id="from_date" name="from_date" placeholder="از تاریخ"
-                                   value="{{ request('from_date') }}">
-                        </div>
-
-                        {{-- تا تاریخ --}}
-                        <div class="input-field col s12 m3">
-                            <input type="text" data-jdp class="form-control" autocomplete="off"
-                                   id="to_date" name="to_date" placeholder="تا تاریخ"
-                                   value="{{ request('to_date') }}">
-                        </div>
-
-                        <div class="input-field col s12 m2">
-                            <button class="btn" type="submit">اعمال فیلتر</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        @include('panel.partials.investment-financial-charts')
+        @include('panel.partials.board-financial-charts')
 
         <div class="card report-card mt-4">
             <div class="card-content">
@@ -337,7 +289,7 @@
                 });
             }
 
-            window.BestsheetFinancialCharts.init({{ \Illuminate\Support\Js::from($financialCharts['charts']) }});
+            window.BestsheetFinancialCharts.init({{ \Illuminate\Support\Js::from($boardCharts['charts']) }});
 
             if (window.jQuery && jQuery.fn.DataTable && document.getElementById('expertPerformanceTable')) {
                 jQuery('#expertPerformanceTable').DataTable({

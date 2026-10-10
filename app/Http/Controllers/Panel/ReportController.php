@@ -64,6 +64,7 @@ class ReportController extends Controller
             'balanceCheck' => $series['balanceCheck'],
             'financialSummary' => $report['summary'],
             'financialCharts' => $report['charts'],
+            'boardCharts' => app(\App\Services\BoardFinancialChartsService::class)->build($request),
             'portfolioRows' => $report['portfolioRows'],
             'sectorAllocation' => $report['sectorAllocation'],
             'totalPaid' => $report['totalPaid'],
