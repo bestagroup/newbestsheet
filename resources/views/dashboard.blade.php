@@ -144,6 +144,20 @@
             </div>
         </section>
 
+        @if($birthdayReminders->isNotEmpty())
+            <div class="mb-4" aria-label="یادآوری تولد کارکنان">
+                @foreach($birthdayReminders as $employee)
+                    <div class="alert alert-success d-flex align-items-center gap-3 mb-2" role="status">
+                        <i class="mdi mdi-cake-variant mdi-36px" aria-hidden="true"></i>
+                        <div>
+                            <strong class="d-block">۲ روز مانده تا تولد {{ $employee->full_name }}.</strong>
+                            <span>تولد این همکار گرامی را پیشاپیش تبریک می‌گوییم.</span>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
         <nav class="dashboard-nav mb-4" aria-label="دسترسی سریع داشبورد">
             <a href="#dashboard-personal">برنامه و اطلاعات من</a>
             <a href="#dashboard-work">وظایف و پیگیری‌ها</a>
@@ -151,7 +165,6 @@
                 <a href="#domain-{{ $section['key'] }}"><i class="mdi {{ $section['icon'] }}"></i> {{ str_replace('گزارش ', '', $section['title']) }}</a>
             @endforeach
         </nav>
-        @if($errors->any())<div class="alert alert-danger" role="alert">عبارت جستجو باید متن و حداکثر ۱۲۰ نویسه باشد.</div>@endif
         <section class="mb-5" id="dashboard-personal">
             <div class="section-heading mb-3">
                 <span class="section-number">۱</span>
@@ -319,22 +332,16 @@
                                         <div class="dashboard-muted">{{ $section['itemsDescription'] }} ({{ number_format($section['items']->count()) }} مورد)</div>
                                     </div>
                                 </div>
-                                <form method="GET" action="{{ route('dashboard') }}#domain-{{ $section['key'] }}" class="dashboard-search mb-3">
-                                    @foreach($domainSections as $other)
-                                        @if($other['key'] !== $section['key'] && is_string(request('dash_search.'.$other['key'])))
-                                            <input type="hidden" name="dash_search[{{ $other['key'] }}]" value="{{ request('dash_search.'.$other['key']) }}">
-                                        @endif
-                                    @endforeach
-                                    <label class="form-label small" for="search-{{ $section['key'] }}">جستجو در تمام رکوردهای مجاز این حوزه</label>
+                                <div class="dashboard-search mb-3">
+                                    <label class="form-label small" for="search-{{ $section['key'] }}">جستجو در لیست</label>
                                     <div class="input-group">
-                                        <input id="search-{{ $section['key'] }}" type="search" name="dash_search[{{ $section['key'] }}]" value="{{ is_string(request('dash_search.'.$section['key'])) ? request('dash_search.'.$section['key']) : '' }}" class="form-control js-domain-search" maxlength="120" placeholder="{{ $section['searchPlaceholder'] }}">
-                                        <button class="btn btn-primary" type="submit">جستجو</button>
+                                        <input id="search-{{ $section['key'] }}" type="search" class="form-control js-domain-search" data-domain="{{ $section['key'] }}" aria-controls="domain-list-{{ $section['key'] }}" maxlength="120" placeholder="{{ $section['searchPlaceholder'] }}">
+                                        <button class="btn btn-outline-secondary js-clear-search" type="button">پاک‌کردن</button>
                                     </div>
-                                    <div class="d-flex justify-content-between mt-2 gap-2"><small class="dashboard-muted">همه واژه‌ها؛ اعداد فارسی/انگلیسی و ی/ک عربی پشتیبانی می‌شوند. حداکثر ۸ واژه.</small><button class="btn btn-sm btn-link js-clear-search" type="button">پاک‌کردن</button></div>
-                                </form>
+                                </div>
                                 <div class="d-flex gap-2 align-items-center mb-2"><label class="small" for="kind-{{ $section['key'] }}">نوع رکورد</label><select id="kind-{{ $section['key'] }}" class="form-select form-select-sm js-kind-filter" data-domain="{{ $section['key'] }}" style="max-width:160px"><option value="">همه موارد نمایش‌داده‌شده</option>@foreach($section['items']->pluck('kind')->unique() as $kind)<option>{{ $kind }}</option>@endforeach</select><small class="dashboard-muted js-result-count" data-domain="{{ $section['key'] }}" aria-live="polite"></small></div>
                                 <p class="dashboard-muted">حداکثر ۳۰ نتیجه اخیر؛ در بخش‌های مالی و اداری حداکثر ۱۵ نتیجه از هر نوع.</p>
-                                <div class="domain-items-scroll" data-domain-list="{{ $section['key'] }}">
+                                <div id="domain-list-{{ $section['key'] }}" class="domain-items-scroll" data-domain-list="{{ $section['key'] }}">
                                     @forelse($section['items'] as $item)
                                         @if($item['url'])<a data-kind="{{ $item['kind'] ?? 'مورد' }}" class="domain-item js-domain-item d-block text-reset" href="{{ $item['url'] }}">@else<div data-kind="{{ $item['kind'] ?? 'مورد' }}" class="domain-item js-domain-item">@endif
                                             <div class="d-flex align-items-start gap-2">
@@ -354,7 +361,7 @@
                                             </div>
                                         @if($item['url'])</a>@else</div>@endif
                                     @empty
-                                        <div class="empty-state border rounded-3">رکوردی در محدوده دسترسی و جستجوی فعلی پیدا نشد.</div>
+                                        <div class="empty-state border rounded-3">رکوردی در محدوده دسترسی شما پیدا نشد.</div>
                                     @endforelse
                                     <div class="empty-state domain-items-empty border rounded-3" data-domain-empty="{{ $section['key'] }}" hidden>موردی مطابق عبارت جست‌وجو پیدا نشد.</div>
                                 </div>

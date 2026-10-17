@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InvestmentRole;
-use App\Support\DashboardSearch;
+use App\Support\LocalizedInputNormalizer;
 use App\Support\Monetary;
 use App\Models\AdministrativeAsset;
 use App\Models\Calendar;
@@ -25,6 +25,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Morilog\Jalali\CalendarUtils;
 use Morilog\Jalali\Jalalian;
 
 class DashboardMetricsService
@@ -39,7 +40,6 @@ class DashboardMetricsService
 
     public function build(): array
     {
-        request()->validate(['dash_search' => ['nullable', 'array'], 'dash_search.*' => ['nullable', 'string', 'max:120']]);
         /** @var User $viewer */
         $viewer = Auth::user();
         $viewer->loadMissing(['roles:id,title,title_fa', 'lastLogin']);
@@ -49,6 +49,7 @@ class DashboardMetricsService
 
         return [
             'dashboardProfile' => $this->profile($viewer),
+            'birthdayReminders' => $this->birthdayReminders($viewer),
             'upcomingMeetings' => $this->upcomingMeetings($viewer),
             'personalCards' => $this->personalCards($viewer, $operationalAlerts),
             'recentActivities' => $this->recentActivities($viewer, $visibleProjectIds),
@@ -83,6 +84,34 @@ class DashboardMetricsService
             'completion' => (int) round(($completed / max(1, $fields->count())) * 100),
             'last_login' => $viewer->lastLogin?->created_at,
         ];
+    }
+
+    private function birthdayReminders(User $viewer): Collection
+    {
+        if (! $viewer->hasRole(InvestmentRole::SuperAdmin->value)) {
+            return collect();
+        }
+
+        $birthday = Jalalian::fromCarbon(today()->addDays(2));
+
+        return Employee::query()
+            ->whereNotNull('birth_date')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'birth_date'])
+            ->filter(function (Employee $employee) use ($birthday): bool {
+                $birthDate = LocalizedInputNormalizer::jalaliDate($employee->birth_date);
+                if (! preg_match('/^(\d{4})\/(\d{2})\/(\d{2})$/', (string) $birthDate, $matches)) {
+                    return false;
+                }
+
+                [$year, $month, $day] = array_map('intval', array_slice($matches, 1));
+
+                return CalendarUtils::checkDate($year, $month, $day)
+                    && $month === $birthday->getMonth()
+                    && $day === $birthday->getDay();
+            })
+            ->values();
     }
 
     private function upcomingMeetings(User $viewer): Collection
@@ -232,7 +261,7 @@ class DashboardMetricsService
             $cards->push($this->card('کارکنان فعال', Employee::query()->where('status', 'active')->count(), 'در حال همکاری', 'mdi-account-check-outline', 'success', route('employees.index')));
             $cards->push($this->card('مدارک پرسنلی', EmployeeDocument::query()->count(), 'اسناد بارگذاری‌شده', 'mdi-file-account-outline', 'info', route('employees.index')));
 
-            $items = $items->merge(Employee::query()->tap(fn ($q) => DashboardSearch::apply($q, 'administrative', ['first_name', 'last_name', 'personnel_code', 'job_title', 'department']))->latest('id')->limit(15)->get()->map(fn (Employee $employee): array => [
+            $items = $items->merge(Employee::query()->latest('id')->limit(15)->get()->map(fn (Employee $employee): array => [
                 'title' => $employee->full_name,
                 'subtitle' => collect([$employee->job_title, $employee->department])->filter()->implode(' — ') ?: 'پرونده پرسنلی',
                 'meta' => 'کد پرسنلی: '.$employee->personnel_code,
@@ -250,7 +279,7 @@ class DashboardMetricsService
             $cards->push($this->card('ارزش اموال', $this->money($assetValue), 'ارزش خرید کل اقلام حذف‌نشده', 'mdi-cash-multiple', 'success', route('assets.index')));
             $cards->push($this->card('اقلام تحویل‌شده', AdministrativeAsset::query()->where('status', 'assigned')->sum('quantity'), 'تحویل کارکنان', 'mdi-account-arrow-left-outline', 'info', route('assets.index')));
 
-            $items = $items->merge(AdministrativeAsset::query()->tap(fn ($q) => DashboardSearch::apply($q, 'administrative', ['name', 'asset_code', 'category', 'serial_number', 'location']))->latest('id')->limit(15)->get()->map(fn (AdministrativeAsset $asset): array => [
+            $items = $items->merge(AdministrativeAsset::query()->latest('id')->limit(15)->get()->map(fn (AdministrativeAsset $asset): array => [
                 'title' => $asset->name,
                 'subtitle' => $asset->category ?: 'کالا/مال اداری',
                 'meta' => 'کد مال: '.$asset->asset_code.' — تعداد: '.number_format($asset->quantity),
@@ -309,7 +338,7 @@ class DashboardMetricsService
             $cards->push($this->card('کل مبلغ قراردادها', $this->money($contractTotal), 'تعهد سرمایه‌گذاری در پورتفوی فعال', 'mdi-file-sign', 'primary', route('finance.index')));
             $cards->push($this->card('مانده تعهدات', $this->money(Monetary::difference($contractTotal, $paidTotal)), 'قرارداد منهای پرداخت؛ منفی یعنی مازاد پرداخت', 'mdi-cash-clock', 'warning', route('finance.index')));
 
-            $items = $items->merge((clone $paymentQuery)->tap(fn ($q) => DashboardSearch::apply($q, 'finance', ['amount', 'date', 'docserial'], ['project' => ['title', 'company_name']]))->with('project:id,title')->latest('id')->limit(15)->get()->map(fn (Finance $finance): array => [
+            $items = $items->merge((clone $paymentQuery)->with('project:id,title')->latest('id')->limit(15)->get()->map(fn (Finance $finance): array => [
                 'title' => $finance->project?->title ?: 'پرداخت سرمایه‌گذاری',
                 'subtitle' => $this->money($finance->amount),
                 'meta' => $finance->date ?: 'تاریخ ثبت نشده',
@@ -327,7 +356,6 @@ class DashboardMetricsService
             $cards->push($this->card('پرونده‌های دارای صورت مالی', (clone $statementQuery)->distinct()->count('project_id'), 'پوشش اطلاعات مالی پورتفو', 'mdi-domain', 'warning', route('financialstatement.index')));
 
             $items = $items->merge((clone $statementQuery)
-                ->tap(fn ($q) => DashboardSearch::apply($q, 'finance', ['year', 'month', 'net_profit'], ['project' => ['title', 'company_name']]))
                 ->with('project:id,title')
                 ->orderByDesc('year')
                 ->orderByDesc('month')
@@ -393,7 +421,6 @@ class DashboardMetricsService
             ->orderBy('investsteps.id')
             ->get();
         $items = Project::query()
-            ->tap(fn ($q) => DashboardSearch::apply($q, 'investment', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
@@ -445,7 +472,6 @@ class DashboardMetricsService
             ->groupBy('status')
             ->get();
         $items = Project::query()
-            ->tap(fn ($q) => DashboardSearch::apply($q, 'portfolio', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->withCount(['currentKpis as kpis_count', 'quarterlyPerformanceReports'])
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')
@@ -494,7 +520,6 @@ class DashboardMetricsService
             ->orderBy('investsteps.id')
             ->get();
         $items = Project::query()
-            ->tap(fn ($q) => DashboardSearch::apply($q, 'executive', ['title', 'company_name', 'id'], ['currentStep' => ['title']]))
             ->with('currentStep:id,title')
             ->whereIn('id', $visibleProjectIds)
             ->latest('updated_at')

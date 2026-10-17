@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\User_logs;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Morilog\Jalali\Jalalian;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class PersonalizedDashboardTest extends TestCase
@@ -218,6 +219,120 @@ class PersonalizedDashboardTest extends TestCase
             ->assertSee($assignedExpert->name)
             ->assertSee('ویرایش مرتبط با حوزه مدیر')
             ->assertDontSee('ویرایش خارج از حوزه مدیر');
+    }
+
+    #[DataProvider('birthdayReminderDates')]
+    public function test_admin_sees_employee_birthday_reminder_two_days_before_the_jalali_anniversary(string $today, string $birthDate): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', $today)->toCarbon()->setTime(23, 59));
+        $admin = $this->userWithRole(InvestmentRole::SuperAdmin, 'birthday-admin@example.test');
+        $employee = Employee::query()->create([
+            'personnel_code' => 'B-100',
+            'first_name' => 'مریم',
+            'last_name' => 'احمدی',
+            'birth_date' => $birthDate,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertViewHas('birthdayReminders', fn ($employees): bool => $employees->modelKeys() === [$employee->id])
+            ->assertSee('۲ روز مانده تا تولد مریم احمدی.')
+            ->assertSee('تولد این همکار گرامی را پیشاپیش تبریک می‌گوییم.');
+    }
+
+    public static function birthdayReminderDates(): array
+    {
+        return [
+            'ordinary day' => ['1405/07/25', '1380/07/27'],
+            'Persian digits' => ['1405/07/25', '۱۳۸۰/۰۷/۲۷'],
+            'Arabic digits and hyphens' => ['1405/07/25', '١٣٨٠-٧-٢٧'],
+            'compact date' => ['1405/07/25', '13800727'],
+            '31-day month boundary' => ['1405/06/30', '1380/07/01'],
+            '30-day month boundary' => ['1405/07/29', '1380/08/01'],
+            'common year boundary' => ['1404/12/28', '1380/01/01'],
+            'leap year boundary' => ['1403/12/29', '1380/01/01'],
+            'Esfand 30 in a leap year' => ['1403/12/28', '1399/12/30'],
+        ];
+    }
+
+    public function test_birthday_reminders_exclude_other_days_invalid_dates_and_archived_employees(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1403/12/28')->toCarbon());
+        $admin = $this->userWithRole(InvestmentRole::SuperAdmin, 'birthday-filter-admin@example.test');
+        $employees = collect([
+            '1399/12/30',
+            '1380/12/28',
+            '1380/12/29',
+            '1380/01/01',
+            '1398/12/30',
+            '1380/13/30',
+            'تاریخ نامعتبر',
+            null,
+            '',
+            '1399/12/30',
+        ])->map(fn ($date, $index) => Employee::query()->create([
+            'personnel_code' => 'B-'.$index,
+            'first_name' => 'کارمند',
+            'last_name' => (string) $index,
+            'birth_date' => $date,
+        ]));
+        $employees->last()->delete();
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertViewHas('birthdayReminders', fn ($reminders): bool => $reminders->modelKeys() === [$employees->first()->id]);
+    }
+
+    public function test_non_admin_users_do_not_receive_employee_birthday_reminders(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/07/25')->toCarbon());
+        Employee::query()->create([
+            'personnel_code' => 'B-100',
+            'first_name' => 'مریم',
+            'last_name' => 'احمدی',
+            'birth_date' => '1380/07/27',
+        ]);
+
+        foreach ([InvestmentRole::AdministrativeSupportManagement, InvestmentRole::Manager, InvestmentRole::FinanceManagement, InvestmentRole::Expert] as $role) {
+            $user = $this->userWithRole($role, $role->value.'-birthday@example.test');
+
+            $this->actingAs($user)
+                ->get('/dashboard')
+                ->assertOk()
+                ->assertViewHas('birthdayReminders', fn ($reminders): bool => $reminders->isEmpty())
+                ->assertDontSee('۲ روز مانده تا تولد مریم احمدی.')
+                ->assertDontSee('یادآوری تولد کارکنان');
+        }
+    }
+
+    public function test_birthday_reminders_include_all_matching_employees_beyond_the_recent_list_limit(): void
+    {
+        $this->travelTo(Jalalian::fromFormat('Y/m/d', '1405/07/25')->toCarbon());
+        $admin = $this->userWithRole(InvestmentRole::SuperAdmin, 'all-birthdays-admin@example.test');
+        $birthdayEmployees = collect(['مریم', 'علی'])->map(fn ($name, $index) => Employee::query()->create([
+            'personnel_code' => 'B-'.$index,
+            'first_name' => $name,
+            'last_name' => 'احمدی',
+            'birth_date' => '1380/07/27',
+        ]));
+        foreach (range(1, 16) as $index) {
+            Employee::query()->create([
+                'personnel_code' => 'OTHER-'.$index,
+                'first_name' => 'کارمند',
+                'last_name' => (string) $index,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertViewHas('birthdayReminders', fn ($reminders): bool => $reminders->count() === 2
+                && $reminders->contains('id', $birthdayEmployees[0]->id)
+                && $reminders->contains('id', $birthdayEmployees[1]->id))
+            ->assertSee('۲ روز مانده تا تولد مریم احمدی.')
+            ->assertSee('۲ روز مانده تا تولد علی احمدی.');
     }
 
     private function userWithRole(InvestmentRole $investmentRole, string $email): User

@@ -1,4 +1,4 @@
-/* No HTML interpolation from searchable records; server owns permissions and search. */
+/* Filter the displayed records locally; the server owns permissions. */
 window.BestsheetDashboard = (() => {
     'use strict';
     const normalize = value => String(value ?? '').normalize('NFKC').toLocaleLowerCase('fa-IR')
@@ -9,21 +9,27 @@ window.BestsheetDashboard = (() => {
     const colors = ['#183b56', '#16866b', '#2596be', '#d49a32', '#9b6ab0', '#d45b67', '#4d908e', '#64748b'];
     function init(sections) {
         document.querySelector('.js-dashboard-refresh')?.addEventListener('click', () => window.location.reload());
-        document.querySelectorAll('.js-clear-search').forEach(button => button.addEventListener('click', () => {
-            button.form.querySelector('input[type="search"]').value = '';
-            button.form.requestSubmit();
-        }));
-        document.querySelectorAll('.js-kind-filter').forEach(select => {
-            const list = document.querySelector(`[data-domain-list="${select.dataset.domain}"]`);
-            const counter = document.querySelector(`.js-result-count[data-domain="${select.dataset.domain}"]`);
+        document.querySelectorAll('.js-domain-search').forEach(input => {
+            const domain = input.dataset.domain;
+            const list = document.querySelector(`[data-domain-list="${domain}"]`);
+            const select = document.querySelector(`.js-kind-filter[data-domain="${domain}"]`);
+            const counter = document.querySelector(`.js-result-count[data-domain="${domain}"]`);
+            const items = [...list.querySelectorAll('.js-domain-item')];
             const apply = () => {
-                const items = [...list.querySelectorAll('.js-domain-item')];
-                items.forEach(item => item.hidden = !!select.value && item.dataset.kind !== select.value);
+                const tokens = normalize(input.value).split(' ').filter(Boolean);
+                items.forEach(item => item.hidden = (!!select.value && item.dataset.kind !== select.value)
+                    || !tokens.every(token => normalize(item.textContent).includes(token)));
                 const count = items.filter(item => !item.hidden).length;
                 counter.textContent = `${exactNumber(count)} نتیجه`;
                 const empty = list.querySelector('.domain-items-empty');
                 if (empty) empty.hidden = count > 0 || items.length === 0;
             };
+            input.addEventListener('input', apply);
+            input.closest('.dashboard-search').querySelector('.js-clear-search').addEventListener('click', () => {
+                input.value = '';
+                apply();
+                input.focus();
+            });
             select.addEventListener('change', apply); apply();
         });
         // Personal panels explicitly search only the recent rows already displayed.
