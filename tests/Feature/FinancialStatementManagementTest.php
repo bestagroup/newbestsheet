@@ -5,8 +5,6 @@ namespace Tests\Feature;
 use App\Models\Financial_statement;
 use App\Models\Project;
 use App\Services\ActivityLogService;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class FinancialStatementManagementTest extends TestCase
@@ -18,30 +16,7 @@ class FinancialStatementManagementTest extends TestCase
         config(['app.url' => 'http://localhost']);
         $this->app['url']->forceRootUrl('http://localhost');
 
-        Schema::dropIfExists('financial_statements');
-        Schema::dropIfExists('projects');
-
-        Schema::create('projects', function (Blueprint $table): void {
-            $table->id();
-            $table->string('title')->nullable();
-            $table->string('company_name')->nullable();
-            $table->unsignedSmallInteger('invest_step')->default(1);
-            $table->timestamps();
-        });
-
-        Schema::create('financial_statements', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('project_id');
-            $table->unsignedSmallInteger('year');
-            $table->unsignedTinyInteger('month');
-
-            foreach (Financial_statement::monetaryFields() as $field) {
-                $table->string($field)->nullable();
-            }
-
-            $table->timestamps();
-            $table->unique(['project_id', 'year', 'month']);
-        });
+        $this->artisan('migrate:fresh', ['--force' => true])->assertExitCode(0);
 
         $this->withoutMiddleware();
     }
@@ -77,7 +52,7 @@ class FinancialStatementManagementTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $visibleStatement->id)
             ->assertJsonPath('data.0.company_name', 'شرکت پورتفو')
-            ->assertJsonPath('data.0.period', '1404/12')
+            ->assertJsonPath('data.0.period', '1404/12 — قدیمی')
             ->assertJsonPath('data.0.net_sales', '1250000');
     }
 
@@ -111,6 +86,11 @@ class FinancialStatementManagementTest extends TestCase
         $deleteResponse->assertOk()
             ->assertJsonPath('success', true);
         $this->assertDatabaseMissing('financial_statements', ['id' => $statement->id]);
+        $this->assertDatabaseHas('business_audits', [
+            'subject_type' => Financial_statement::class,
+            'subject_id' => $statement->id,
+            'action' => 'deleted',
+        ]);
 
         $this->deleteJson('/panel/financialstatement/'.$statement->id)
             ->assertNotFound()
