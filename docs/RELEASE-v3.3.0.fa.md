@@ -19,7 +19,7 @@
 ## استقرار
 
 1. تغییرات و ADR-001 را مرور و نسخه پشتیبان دیتابیس و اسناد را کنترل کنید.
-2. کد tag نسخه را دریافت کنید و `composer install --no-dev --prefer-dist --optimize-autoloader` اجرا کنید؛ .env و APP_KEY قبلی حفظ شود.
+2. کد شاخه `release/v3.3.0` را دریافت کنید و `composer install --no-dev --prefer-dist --optimize-autoloader` اجرا کنید؛ .env و APP_KEY قبلی حفظ شود.
 3. این نسخه migration جدید ندارد. اگر نصب از نسخه قدیمی‌تر است، migrationهای معوق را ابتدا روی نسخه آزمایشی دیتابیس بررسی کنید.
 4. `php artisan optimize:clear` و سپس cacheهای مورد استفاده محیط را بازسازی کنید؛ در صورت استفاده از queue worker، `php artisan queue:restart` اجرا شود.
 5. گزارش را با داده‌های سالانه، فصلی، شرکت خارج‌شده و شرکت فاقد صورت مالی کنترل کنید. جدول پروژه‌ها اکنون نوع آخرین دوره را نیز نمایش می‌دهد.
