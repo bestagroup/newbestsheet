@@ -507,10 +507,14 @@ class EnterpriseIntegrationTest extends TestCase
     {
         $project = $this->project();
         $statement = Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
+        // InnoDB needs an index starting with project_id for the foreign key.
+        // Install its replacement before dropping the current composite index.
+        \Illuminate\Support\Facades\Schema::table('financial_statements', function ($table) {
+            $table->unique(['project_id', 'year', 'month'], 'fs_project_period_unique');
+        });
         \Illuminate\Support\Facades\Schema::table('financial_statements', function ($table) {
             $table->dropUnique('fs_project_period_type_unique');
             $table->dropColumn('period_type');
-            $table->unique(['project_id', 'year', 'month'], 'fs_project_period_unique');
         });
         \Illuminate\Support\Facades\Schema::table('business_audits', fn ($table) => $table->dropIndex('business_audits_subject_type_subject_id_index'));
         $migration = require database_path('migrations/2026_10_08_000001_add_business_integrity.php');
