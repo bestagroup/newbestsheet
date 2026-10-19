@@ -78,7 +78,7 @@ class EnterpriseIntegrationTest extends TestCase
     {
         $project = $this->project();
         DB::listen(function ($query) {
-            if (str_starts_with($query->sql, 'insert into "business_audits"')) {
+            if (preg_match('/^insert into [\"`]business_audits[\"`]/i', $query->sql)) {
                 throw new \RuntimeException('Audit unavailable');
             }
         });
@@ -467,5 +467,71 @@ class EnterpriseIntegrationTest extends TestCase
                     && collect($data['charts'])->firstWhere('id','annual-current')['series'][0]['values']===[null];
             });
         $this->get('/panel/report?'.http_build_query(['chart_companies'=>['project:'.$a->id,'project:'.$exited->id]]))->assertNotFound();
+    }
+
+    public function test_latest_profit_includes_modern_periods_and_preserves_unknown_values(): void
+    {
+        $a = $this->project();
+        $b = $this->project();
+        foreach ([[$a, 1404, 'legacy', '999'], [$a, 1405, 'quarterly', '20'], [$a, 1405, 'annual', '9007199254740993'], [$b, 1405, 'annual', null]] as [$project, $year, $type, $profit]) {
+            Financial_statement::query()->create(['project_id' => $project->id, 'year' => $year, 'month' => 12, 'period_type' => $type, 'net_profit' => $profit]);
+        }
+        $this->get('/panel/report')->assertOk()->assertViewHas('investmentSummary', fn ($summary) =>
+            $summary['profit'] === '9007199254740993' && $summary['reported_companies'] === 1 && $summary['missing_companies'] === 1);
+        $this->get('/panel/report')->assertViewHas('portfolioRows', fn ($rows) =>
+            $rows->firstWhere('project_id', $a->id)['net_profit'] === '9007199254740993'
+            && $rows->firstWhere('project_id', $b->id)['net_profit'] === null);
+    }
+
+    public function test_negative_commitment_is_consistent_in_summary_and_report_rows(): void
+    {
+        $project = $this->project();
+        $project->update(['amount_request_accept' => '100']);
+        Finance::query()->create(array_replace($this->payment($project), ['amount' => '150']));
+        $this->get('/panel/report')->assertOk()
+            ->assertViewHas('investmentSummary', fn ($summary) => $summary['remaining'] === '-50')
+            ->assertViewHas('remainingCommitment', '-50')
+            ->assertViewHas('portfolioRows', fn ($rows) => $rows->firstWhere('project_id', $project->id)['remaining_amount'] === '-50');
+    }
+
+    public function test_statement_cannot_be_moved_between_projects(): void
+    {
+        $project = $this->project();
+        $other = $this->project();
+        $statement = Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => '10']);
+        $this->patchJson('/panel/financialstatement/'.$statement->id, ['project_id' => $other->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual'])->assertUnprocessable()->assertJsonValidationErrors('project_id');
+        $this->assertDatabaseHas('financial_statements', ['id' => $statement->id, 'project_id' => $project->id, 'net_profit' => '10']);
+    }
+
+    public function test_business_integrity_migration_can_resume_after_partial_creation(): void
+    {
+        $project = $this->project();
+        $statement = Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
+        \Illuminate\Support\Facades\Schema::table('financial_statements', function ($table) {
+            $table->dropUnique('fs_project_period_type_unique');
+            $table->dropColumn('period_type');
+            $table->unique(['project_id', 'year', 'month'], 'fs_project_period_unique');
+        });
+        \Illuminate\Support\Facades\Schema::table('business_audits', fn ($table) => $table->dropIndex('business_audits_subject_type_subject_id_index'));
+        $migration = require database_path('migrations/2026_10_08_000001_add_business_integrity.php');
+        $migration->up();
+        $migration->up();
+        $this->assertDatabaseHas('financial_statements', ['id' => $statement->id, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('financial_statements', 'period_type'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasIndex('financial_statements', 'fs_project_period_type_unique', 'unique'));
+    }
+
+    public function test_duplicate_company_statement_is_flagged_instead_of_arbitrarily_selected(): void
+    {
+        $company = \App\Models\Company::query()->create(['company_name' => 'Shared company']);
+        foreach (['10', '20'] as $amount) {
+            $project = $this->project();
+            $project->update(['company_id' => $company->id]);
+            Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => $amount]);
+        }
+        $summary = app(\App\Services\InvestmentReportSummaryService::class)->build($this->admin);
+        $this->assertNull($summary['profit']);
+        $this->assertSame(1, $summary['conflicting_companies']);
+        $this->assertSame(1, $summary['missing_companies']);
     }
 }

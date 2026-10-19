@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,29 @@ class Project extends Model
     use HasFactory;
 
     public const PORTFOLIO_MINIMUM_STEP = 14;
+
+    public const PORTFOLIO_EXIT_STEP = 20;
+
+    public const APPLICATION_REVIEW_STEP = 6;
+
+    public function scopeNotRejected(Builder $query): Builder
+    {
+        $column = $this->qualifyColumn('is_rejected');
+
+        return $query->where(fn (Builder $nested) => $nested->whereNull($column)->orWhere($column, 0));
+    }
+
+    public function scopeCurrentApplications(Builder $query): Builder
+    {
+        return $query->notRejected()->where($this->qualifyColumn('invest_step'), '<', self::APPLICATION_REVIEW_STEP);
+    }
+
+    public function scopeActivePortfolio(Builder $query): Builder
+    {
+        return $query->notRejected()
+            ->where($this->qualifyColumn('invest_step'), '>=', self::PORTFOLIO_MINIMUM_STEP)
+            ->where($this->qualifyColumn('invest_step'), '<', self::PORTFOLIO_EXIT_STEP);
+    }
 
     protected $guarded = [];
 

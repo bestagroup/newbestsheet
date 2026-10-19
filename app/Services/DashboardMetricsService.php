@@ -408,7 +408,7 @@ class DashboardMetricsService
         $cards = collect([
             $this->card('شرکت‌های متقاضی', $companyCount, 'شرکت‌های ثبت‌شده در سامانه', 'mdi-domain-plus', 'info', $canCompanies ? route('panel.company.index') : null),
             $this->card('طرح‌های قابل بررسی', (clone $projects)->count(), 'متناسب با حوزه و تخصیص شما', 'mdi-lightbulb-on-outline', 'primary', $this->can($viewer, 'project') ? route('project.index') : null),
-            $this->card('طرح‌های جاری', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '<', 6)->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'success', $this->can($viewer, 'flow') ? route('flow.index') : null),
+            $this->card('طرح‌های جاری', (clone $projects)->currentApplications()->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'success', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('مرحله عقد قرارداد', (clone $projects)->where('invest_step', 13)->count(), 'طرح‌های رسیده به مرحله قرارداد', 'mdi-file-sign', 'warning', $this->can($viewer, 'flow') ? route('flow.index') : null),
             $this->card('طرح‌های ردشده', (clone $projects)->where('is_rejected', 1)->count(), 'خارج‌شده از فرایند', 'mdi-close-octagon-outline', 'danger', $this->can($viewer, 'project') ? route('project.index') : null),
         ]);
@@ -506,7 +506,7 @@ class DashboardMetricsService
         $cards = collect([
             $this->card('کل طرح‌ها', (clone $projects)->count(), 'تمام پرونده‌های قابل مشاهده', 'mdi-lightbulb-group-outline', 'primary', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('طرح‌های فعال پورتفو', $this->activePortfolioIds($visibleProjectIds)->count(), 'پرونده‌های پس از قرارداد', 'mdi-domain', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
-            $this->card('طرح‌های جاری', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '<', 6)->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'info', $this->can($viewer, 'report') ? route('report.index') : null),
+            $this->card('طرح‌های جاری', (clone $projects)->currentApplications()->count(), 'ردنشده و قبل از مرحله ۶', 'mdi-progress-check', 'info', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('خروج کامل', (clone $projects)->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->where('invest_step', '>=', 20)->count(), 'خارج‌شده از سرمایه‌گذاری', 'mdi-check-decagram-outline', 'success', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('طرح‌های ردشده', (clone $projects)->where('is_rejected', 1)->count(), 'خارج‌شده از فرایند', 'mdi-close-octagon-outline', 'danger', $this->can($viewer, 'report') ? route('report.index') : null),
             $this->card('کل پرداخت سرمایه‌گذاری', $this->money(Monetary::sum(Finance::query()->whereIn('project_id', $this->activePortfolioIds($visibleProjectIds))->pluck('amount'))), 'پرداخت تجمعی پورتفوی فعال', 'mdi-cash-multiple', 'warning', $this->can($viewer, 'report') ? route('report.index') : null),
@@ -550,8 +550,7 @@ class DashboardMetricsService
 
     private function activePortfolioIds(Collection $ids): Collection
     {
-        return Project::query()->whereIn('id', $ids)->whereBetween('invest_step', [14, 19])
-            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))->pluck('id');
+        return Project::query()->whereIn('id', $ids)->activePortfolio()->pluck('id');
     }
 
     private function card(string $label, string|int|float $value, string $hint, string $icon, string $tone, ?string $url = null): array

@@ -9,18 +9,20 @@ use App\Models\MenuPanel;
 use App\Models\Project;
 use App\Models\SubmenuPanel;
 use App\Services\ActivityLogService;
-use App\Services\BusinessAudit;
-use Illuminate\Support\Facades\DB;
+use App\Services\FinancialStatementService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
 class FinancialstatementController extends Controller
 {
+    public function __construct(private readonly FinancialStatementService $statements) {}
+
     public function index(Request $request)
     {
         if ($request->ajax()) {
@@ -105,14 +107,12 @@ class FinancialstatementController extends Controller
     public function store(FinancialStatementRequest $request, ActivityLogService $activity): JsonResponse
     {
         try {
-            $statement = DB::transaction(function () use ($request) {
-                $statement = Financial_statement::query()->create($request->validated());
-                app(BusinessAudit::class)->record($statement, 'created');
-                return $statement;
-            });
+            $statement = $this->statements->create($request->validated());
             $activity->record('financial_statement.created', 'صورت مالی #'.$statement->id.' ثبت شد.');
 
             return $this->success('صورت مالی با موفقیت ثبت شد.');
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
@@ -132,18 +132,14 @@ class FinancialstatementController extends Controller
     public function update(FinancialStatementRequest $request, int $id, ActivityLogService $activity): JsonResponse
     {
         try {
-            $statement = DB::transaction(function () use ($request, $id) {
-                $statement = $this->findPortfolioStatementOrFail($id, true);
-                $before = $statement->getAttributes();
-                $statement->update($request->validated());
-                app(BusinessAudit::class)->record($statement, 'updated', $before);
-                return $statement;
-            });
+            $statement = $this->statements->update($id, $request->validated());
             $activity->record('financial_statement.updated', 'صورت مالی #'.$statement->id.' ویرایش شد.');
 
             return $this->success('صورت مالی با موفقیت ویرایش شد.');
         } catch (ModelNotFoundException) {
             return $this->failure('صورت مالی موردنظر یافت نشد.', 404);
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
@@ -154,16 +150,14 @@ class FinancialstatementController extends Controller
     public function destroy(int $id, ActivityLogService $activity): JsonResponse
     {
         try {
-            DB::transaction(function () use ($id) {
-                $statement = $this->findPortfolioStatementOrFail($id, true);
-                app(BusinessAudit::class)->record($statement, 'deleted', $statement->getAttributes());
-                $statement->delete();
-            });
+            $this->statements->delete($id);
             $activity->record('financial_statement.deleted', 'صورت مالی #'.$id.' حذف شد.');
 
             return $this->success('صورت مالی با موفقیت حذف شد.');
         } catch (ModelNotFoundException) {
             return $this->failure('صورت مالی موردنظر یافت نشد.', 404);
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
@@ -199,11 +193,10 @@ class FinancialstatementController extends Controller
             ->get(['id', 'title', 'company_name']);
     }
 
-    private function findPortfolioStatementOrFail(int $id, bool $lock = false): Financial_statement
+    private function findPortfolioStatementOrFail(int $id): Financial_statement
     {
         return Financial_statement::query()
             ->whereKey($id)
-            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->whereHas('project', static fn ($query) => $query->where(
                 'invest_step',
                 '>=',

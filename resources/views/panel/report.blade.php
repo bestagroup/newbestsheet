@@ -95,11 +95,12 @@
             <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center">
                 <p class="kpi-value">{{ $investmentSummary['profit'] === null ? '—' : \App\Support\Monetary::format($investmentSummary['profit']) }}</p>
                 <p class="kpi-label">سود و زیان آخرین دوره کل شرکت‌ها</p>
-                <small class="text-muted">ریال؛ {{ $investmentSummary['reported_companies'] }} شرکت دارای صورت مالی و {{ $investmentSummary['missing_companies'] }} شرکت فاقد صورت مالی از نوع انتخاب‌شده</small>
-                @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">آخرین دوره شرکت‌ها یکسان نیست.</small>@endif
+                <small class="text-muted">ریال؛ {{ $investmentSummary['reported_companies'] }} شرکت دارای سود و زیان قابل محاسبه و {{ $investmentSummary['missing_companies'] }} شرکت فاقد مبلغ معتبر یا دارای سند مبهم</small>
+                @if($investmentSummary['conflicting_companies'])<small class="text-warning d-block">{{ $investmentSummary['conflicting_companies'] }} شرکت دارای صورت مالی تکراری در آخرین دوره است.</small>@endif
+                @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">تاریخ یا نوع آخرین دوره شرکت‌ها متفاوت است؛ این مبلغ جمع هم‌دوره نیست.</small>@endif
             </div></div></div>
         </div>
-        <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین صورت مالی هر شرکت از نوع دوره انتخاب‌شده است. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
+        <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین دوره ثبت‌شده هر شرکت است؛ در تاریخ یکسان، اولویت با سالانه، سپس فصلی و سپس قدیمی است. اقلام ناموجود و اسناد تکراری در جمع لحاظ نمی‌شوند. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
 
         @include('panel.partials.operational-report')
         @include('panel.partials.board-financial-charts')
@@ -149,8 +150,8 @@
                                 <td>{{ \App\Support\Monetary::format($row['remaining_amount']) }}</td>
                                 <td>{{ number_format($row['funding_percent'], 1) }}٪</td>
                                 <td>{{ $row['latest_period'] ?: '—' }}</td>
-                                <td>{{ \App\Support\Monetary::format($row['net_sales']) }}</td>
-                                <td class="{{ $row['net_profit'] < 0 ? 'text-danger' : 'text-success' }}">{{ \App\Support\Monetary::format($row['net_profit']) }}</td>
+                                <td>{{ $row['net_sales'] === null ? '—' : \App\Support\Monetary::format($row['net_sales']) }}</td>
+                                <td class="{{ $row['net_profit'] < 0 ? 'text-danger' : 'text-success' }}">{{ $row['net_profit'] === null ? '—' : \App\Support\Monetary::format($row['net_profit']) }}</td>
                                 <td>{{ number_format($row['current_ratio'], 2) }}</td>
                                 <td>{{ number_format($row['debt_to_equity'], 2) }}</td>
                                 <td>{{ number_format($row['roa'], 1) }}٪</td>

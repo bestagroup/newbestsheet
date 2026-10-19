@@ -17,7 +17,7 @@ final class BoardFinancialChartsService
     {
         $request->validate(['chart_companies'=>['nullable','array'], 'chart_companies.*'=>['required','string','max:50']]);
         $projects = Project::query()->whereIn('id', $this->access->visibleProjectIds($request->user()))
-            ->whereBetween('invest_step', [14,19])->where(fn ($q) => $q->whereNull('is_rejected')->orWhere('is_rejected',0))
+            ->activePortfolio()
             ->with('company:id,company_name')->orderBy('company_name')->orderBy('id')->get();
         $groups = $projects->groupBy(fn ($p) => $p->company_id ? 'company:'.$p->company_id : 'project:'.$p->id);
         $companies = $groups->map(fn ($rows,$key) => ['id'=>$key,'name'=>$rows->first()->company?->company_name ?: ($rows->first()->company_name ?: $rows->first()->title)])->values();

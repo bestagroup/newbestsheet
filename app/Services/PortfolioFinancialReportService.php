@@ -15,6 +15,8 @@ class PortfolioFinancialReportService
     public function __construct(
         private readonly FinancialStatementMetricsService $metrics,
         private readonly OperationalAnalyticsService $operationalAnalytics,
+        private readonly \App\Services\FinancialReporting\LatestStatementSelector $selector,
+        private readonly InvestmentFinancialChartsService $charts,
     ) {}
 
     public function build(Request $request): array
@@ -26,9 +28,7 @@ class PortfolioFinancialReportService
         );
         $financialProjectIds = Project::query()
             ->whereIn('id', $visibleProjectIds)
-            ->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
-            ->where('invest_step', '<', 20)
-            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))
+            ->activePortfolio()
             ->pluck('id');
 
         $records = Financial_statement::query()
@@ -95,13 +95,11 @@ class PortfolioFinancialReportService
             ->whereIn('id', $financialProjectIds)
             ->with([
                 'company:id,company_name',
-                'financialStatements' => fn ($query) => $query->filter($request)->orderBy('year')->orderBy('month'),
+                'financialStatements' => fn ($query) => $query->filter($request, true)->orderBy('year')->orderBy('month'),
                 'finances:id,project_id,amount',
                 'currentStep:id,title',
             ])
-            ->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
-            ->where('invest_step', '<', 20)
-            ->where(fn ($query) => $query->whereNull('is_rejected')->orWhere('is_rejected', 0))
+            ->activePortfolio()
             ->when($projectId, fn ($query) => $query->whereKey($projectId))
             ->orderBy('title')
             ->get();
@@ -111,7 +109,8 @@ class PortfolioFinancialReportService
         $portfolioRows = $projects->map(function (Project $project) use ($riskMap): array {
             $paid = Monetary::sum($project->finances->pluck('amount'));
             $contract = (string) Monetary::value($project->amount_request_accept);
-            $statement = $this->metrics->build($project->financialStatements)['summary'];
+            $selected = $this->selector->select($project->financialStatements)['statement'];
+            $statement = $this->metrics->build(collect($selected ? [$selected] : []))['summary'];
 
             $risk = $riskMap[(int) $project->id] ?? ['overdue_kpis' => 0, 'overdue_commitments' => 0, 'level' => 'normal'];
 
@@ -127,11 +126,11 @@ class PortfolioFinancialReportService
                 'risk_level' => $risk['level'],
                 'contract_amount' => $contract,
                 'paid_amount' => $paid,
-                'remaining_amount' => Monetary::difference($contract, $paid, true),
+                'remaining_amount' => Monetary::difference($contract, $paid),
                 'funding_percent' => $contract > 0 ? round(($paid / $contract) * 100, 2) : 0,
-                'latest_period' => $statement['period'],
-                'net_sales' => $statement['net_sales'],
-                'net_profit' => $statement['net_profit'],
+                'latest_period' => $selected ? $statement['period'].' — '.(['annual' => 'سالانه', 'quarterly' => 'فصلی', 'legacy' => 'قدیمی'][$selected->period_type]) : null,
+                'net_sales' => $selected?->net_sales,
+                'net_profit' => $selected?->net_profit,
                 'current_ratio' => $statement['current_ratio'],
                 'debt_to_equity' => $statement['debt_to_equity'],
                 'roa' => $statement['roa'],
@@ -160,7 +159,7 @@ class PortfolioFinancialReportService
         ];
 
         return [
-            'charts' => app(InvestmentFinancialChartsService::class)->build($request, $projects, $chartRecords, $projects->flatMap(fn ($p) => $p->finances)),
+            'charts' => $this->charts->build($request, $projects, $chartRecords, $projects->flatMap(fn ($p) => $p->finances)),
             'series' => $metrics['series'],
             'summary' => $metrics['summary'],
             'sectorAllocation' => [
@@ -170,7 +169,7 @@ class PortfolioFinancialReportService
             'portfolioRows' => $portfolioRows,
             'totalPaid' => $totalPaid,
             'totalContract' => $totalContract,
-            'remainingCommitment' => Monetary::difference($totalContract, $totalPaid, true),
+            'remainingCommitment' => Monetary::difference($totalContract, $totalPaid),
             'reportCounts' => $reportCounts,
         ];
     }

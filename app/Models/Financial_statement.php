@@ -133,14 +133,14 @@ class Financial_statement extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function scopeFilter(Builder $query, Request $request): Builder
+    public function scopeFilter(Builder $query, Request $request, bool $allTypes = false): Builder
     {
         $projectId = $request->input('project_id', $request->input('company_id'));
         [$fromYear, $fromMonth] = $this->periodParts($request->input('from_date'));
         [$toYear, $toMonth] = $this->periodParts($request->input('to_date'));
 
         return $query
-            ->where('period_type', in_array($request->input('period_type'), ['annual', 'quarterly', 'legacy'], true) ? $request->input('period_type') : 'legacy')
+            ->when(! $allTypes || $request->filled('period_type'), fn (Builder $builder) => $builder->where('period_type', in_array($request->input('period_type'), ['annual', 'quarterly', 'legacy'], true) ? $request->input('period_type') : 'legacy'))
             ->when($projectId, fn (Builder $builder) => $builder->where('project_id', (int) $projectId))
             ->when($fromYear, function (Builder $builder) use ($fromYear, $fromMonth): void {
                 $builder->where(function (Builder $period) use ($fromYear, $fromMonth): void {
