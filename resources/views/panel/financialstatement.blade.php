@@ -534,7 +534,9 @@
                 if (!row) return;
 
                 $('#detailsModalLabel').text(`صورت مالی ${row.company_name || row.project_title || ''}`);
-                $('#detailsModalPeriod').text(`دوره مالی ${row.period} — تمام ارقام به ریال`);
+                const basisLabel = {standalone: 'مستقل', ytd: 'تجمعی از ابتدای سال مالی', unconfirmed: 'مبنای تعیین‌نشده'}[row.income_basis] || 'مبنای تعیین‌نشده';
+                const dateLabel = row.period_start && row.period_end ? `${row.period_start} تا ${row.period_end}` : 'تاریخ دقیق تعیین نشده';
+                $('#detailsModalPeriod').text(`دوره مالی ${row.period} — ${dateLabel} — ${basisLabel} — تمام ارقام به ریال`);
 
                 const groupsHtml = Object.entries(fieldGroups).map(([groupTitle, fields]) => {
                     const items = Object.entries(fields).map(([field, label]) => {

@@ -11,7 +11,7 @@
         <i class="mdi mdi-information-outline mdi-20px mt-1"></i>
         <div>
             <strong>دوره مالی را دقیق انتخاب کنید.</strong>
-            برای صورت مالی سالانه، ماه پایان دوره معمولاً ماه ۱۲ است. نوع سالانه و فصلی مستقل است؛ ارقام فصلی باید مربوط به همان فصل باشند، نه تجمعی.
+            سال و ماه، مربوط به پایان دوره شمسی است. در مبنای مستقل، ارقام سود و زیان فقط مربوط به بازه واردشده است؛ در مبنای تجمعی، شروع بازه باید ابتدای سال مالی شرکت باشد. اقلام ترازنامه همواره مانده پایان دوره‌اند. سوابق تعیین‌نشده تا تکمیل اطلاعات، جدا نمایش داده می‌شوند.
         </div>
     </div>
 </div>
@@ -59,6 +59,22 @@
 <option value="{{ $value }}" @selected(old('period_type', data_get($statement, 'period_type', 'annual')) === $value)>{{ $label }}</option>
 @endforeach
 </select></div>
+@foreach(['period_start' => 'شروع دوره شمسی', 'period_end' => 'پایان دوره شمسی'] as $field => $label)
+<div class="col-12 col-lg-4">
+    <label class="form-label" for="{{ $idPrefix }}_{{ $field }}">{{ $label }}</label>
+    <input type="text" dir="ltr" class="form-control" name="{{ $field }}" id="{{ $idPrefix }}_{{ $field }}"
+           value="{{ old($field, data_get($statement, $field)) }}" placeholder="1404/01/01" maxlength="10">
+</div>
+@endforeach
+<div class="col-12 col-lg-4">
+    <label class="form-label" for="{{ $idPrefix }}_income_basis">مبنای صورت سود و زیان</label>
+    <select name="income_basis" id="{{ $idPrefix }}_income_basis" class="form-select" required>
+        @foreach(['standalone' => 'مستقل — فقط بازه واردشده', 'ytd' => 'تجمعی — از ابتدای سال مالی', 'unconfirmed' => 'تعیین‌نشده — نیازمند بررسی'] as $value => $label)
+            <option value="{{ $value }}" @selected(old('income_basis', data_get($statement, 'income_basis', 'standalone')) === $value)>{{ $label }}</option>
+        @endforeach
+    </select>
+</div>
+<div class="col-12"><small class="text-muted">ثبت استاندارد نیازمند اتصال پرونده به شرکت ثبت‌شده است. برای اسناد تاریخی بدون اطلاعات کافی، گزینه تعیین‌نشده و تاریخ‌های خالی را نگه دارید. تعیین مبنا، تأیید حسابرسی سند محسوب نمی‌شود.</small></div>
 @foreach($fieldGroups as $groupTitle => $fields)
     <div class="col-12">
         <section class="statement-form-section" aria-labelledby="{{ $idPrefix }}_group_{{ $loop->index }}">

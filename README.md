@@ -31,6 +31,8 @@ php vendor/bin/phpunit --configuration phpunit.mysql.xml
 
 ## معماری و انتشار
 
+- [استانداردسازی صورت‌های مالی و راهنمای ارتقای v3.4.0](docs/RELEASE-v3.4.0.fa.md)
+
 - [تصمیم معماری مالی v3.3.0](docs/architecture/ADR-001-financial-boundaries.fa.md)
 - [گزارش اعتبارسنجی نسخه](docs/RELEASE-v3.3.0.fa.md)
 - [معماری قبلی](docs/ARCHITECTURE.fa.md)

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\LocalizedInputNormalizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -106,6 +107,10 @@ class Financial_statement extends Model
 
     protected $fillable = [
         'project_id',
+        'company_id',
+        'period_start',
+        'period_end',
+        'income_basis',
         'year',
         'month',
         'period_type',
@@ -114,6 +119,7 @@ class Financial_statement extends Model
 
     protected $casts = [
         'project_id' => 'integer',
+        'company_id' => 'integer',
         'year' => 'integer',
         'month' => 'integer',
     ];
@@ -131,6 +137,19 @@ class Financial_statement extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function scopeConsistentOwner(Builder $query): Builder
+    {
+        return $query->where(function (Builder $owners): void {
+            $owners->whereNull('financial_statements.company_id')
+                ->orWhereHas('project', fn (Builder $project) => $project->whereColumn('projects.company_id', 'financial_statements.company_id'));
+        });
     }
 
     public function scopeFilter(Builder $query, Request $request, bool $allTypes = false): Builder
@@ -168,7 +187,7 @@ class Financial_statement extends Model
             return [null, null];
         }
 
-        $value = \App\Support\LocalizedInputNormalizer::jalaliDate($value);
+        $value = LocalizedInputNormalizer::jalaliDate($value);
         $value = str_replace(['-', '.'], '/', trim($value));
 
         if (preg_match('/^(\d{4})\/(\d{1,2})/', $value, $matches)) {

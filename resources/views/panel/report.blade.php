@@ -97,7 +97,8 @@
                 <p class="kpi-label">سود و زیان آخرین دوره کل شرکت‌ها</p>
                 <small class="text-muted">ریال؛ {{ $investmentSummary['reported_companies'] }} شرکت دارای سود و زیان قابل محاسبه و {{ $investmentSummary['missing_companies'] }} شرکت فاقد مبلغ معتبر یا دارای سند مبهم</small>
                 @if($investmentSummary['conflicting_companies'])<small class="text-warning d-block">{{ $investmentSummary['conflicting_companies'] }} شرکت دارای صورت مالی تکراری در آخرین دوره است.</small>@endif
-                @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">تاریخ یا نوع آخرین دوره شرکت‌ها متفاوت است؛ این مبلغ جمع هم‌دوره نیست.</small>@endif
+                @if($investmentSummary['unconfirmed_companies'])<small class="text-warning d-block">مبنای سود و زیان {{ $investmentSummary['unconfirmed_companies'] }} شرکت تعیین نشده است؛ جمع ارقام گزارش تجمیعی حسابرسی‌شده نیست.</small>@endif
+                @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">تاریخ، طول یا مبنای آخرین دوره شرکت‌ها متفاوت است؛ این مبلغ جمع هم‌دوره نیست.</small>@endif
             </div></div></div>
         </div>
         <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین دوره ثبت‌شده هر شرکت است؛ در تاریخ یکسان، اولویت با سالانه، سپس فصلی و سپس قدیمی است. اقلام ناموجود و اسناد تکراری در جمع لحاظ نمی‌شوند. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>

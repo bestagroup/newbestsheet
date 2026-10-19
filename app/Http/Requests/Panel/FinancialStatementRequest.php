@@ -4,6 +4,7 @@ namespace App\Http\Requests\Panel;
 
 use App\Models\Financial_statement;
 use App\Models\Project;
+use App\Support\FinancialPeriod;
 use App\Support\LocalizedInputNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,11 @@ class FinancialStatementRequest extends FormRequest
             $payload[$field] = LocalizedInputNormalizer::decimal($this->input($field));
         }
 
+        foreach (['period_start', 'period_end'] as $field) {
+            if ($this->has($field)) {
+                $payload[$field] = FinancialPeriod::normalize($this->input($field)) ?? $this->input($field);
+            }
+        }
         $this->merge($payload);
     }
 
@@ -42,6 +48,9 @@ class FinancialStatementRequest extends FormRequest
             ->ignore($statementId);
 
         $rules = [
+            'income_basis' => ['sometimes', 'required', Rule::in(['unconfirmed', 'standalone', 'ytd'])],
+            'period_start' => ['nullable', 'string', 'max:10'],
+            'period_end' => ['nullable', 'string', 'max:10'],
             'period_type' => ['required', Rule::in(['annual', 'quarterly', 'legacy'])],
             'project_id' => [
                 'required',
@@ -52,7 +61,7 @@ class FinancialStatementRequest extends FormRequest
                 $periodUnique,
             ],
             'year' => ['required', 'integer', 'between:1300,1600'],
-            'month' => ['required', 'integer', 'between:1,12', Rule::when($this->input('period_type') === 'quarterly', Rule::in([3, 6, 9, 12]))],
+            'month' => ['required', 'integer', 'between:1,12', Rule::when($this->input('period_type') === 'quarterly' && ! $this->filled('period_end'), Rule::in([3, 6, 9, 12]))],
         ];
 
         foreach (Financial_statement::monetaryFields() as $field) {

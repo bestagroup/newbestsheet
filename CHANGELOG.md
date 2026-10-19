@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.4.0 — 2026-10-19
+
+- Add resumable, non-destructive company ownership and explicit Solar Hijri period metadata migration.
+- Validate standalone and YTD periods without inferring legacy dates; preserve exact monetary amounts.
+- Serialize company-period writes and reject duplicates across dossiers and ownership reassignment.
+- Separate board chart bases and exact date ranges, preserving authorized source-project visibility.
+- Provide read-only pre/post-upgrade financial quality audit and operational remediation guide.
+- Extend SQLite and MySQL regression coverage for data preservation and interrupted migration recovery.
+
 ## 3.3.0 — 2026-10-19
 
 - Centralize active portfolio/current application queries across reports and dashboard.

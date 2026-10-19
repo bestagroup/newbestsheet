@@ -35,9 +35,9 @@ class InvestmentReportSummaryService
         $contract = Monetary::sum($projects->pluck('amount_request_accept'));
         $paid = Monetary::sum(Finance::query()->whereIn('project_id', $projects->pluck('id'))->pluck('amount'));
         $companyKeys = $projects->mapWithKeys(fn ($p) => [$p->id => $p->company_id ? 'company:'.$p->company_id : 'project:'.$p->id]);
-        $statements = Financial_statement::query()->whereIn('project_id', $projects->pluck('id'))
+        $statements = Financial_statement::query()->consistentOwner()->whereIn('project_id', $projects->pluck('id'))
             ->when($periodType !== null, fn ($query) => $query->where('period_type', $periodType))
-            ->get(['id', 'project_id', 'year', 'month', 'period_type', 'net_profit'])
+            ->get(['id', 'project_id', 'year', 'month', 'period_type', 'net_profit', 'company_id', 'period_start', 'period_end', 'income_basis'])
             ->groupBy(fn ($row) => $companyKeys[$row->project_id]);
         $selections = $statements->map(fn ($rows) => $this->selector->select($rows));
         $latest = $selections->pluck('statement')->filter()->values();
@@ -49,10 +49,11 @@ class InvestmentReportSummaryService
             'paid' => $paid,
             'remaining' => Monetary::difference($contract, $paid),
             'profit' => $known->isEmpty() ? null : Monetary::sum($known->pluck('net_profit')),
+            'unconfirmed_companies' => $known->filter(fn ($row) => ($row->income_basis ?? 'unconfirmed') === 'unconfirmed')->count(),
             'reported_companies' => $known->count(),
             'missing_companies' => $companyKeys->unique()->count() - $known->count(),
             'conflicting_companies' => $selections->where('conflict', true)->count(),
-            'mixed_periods' => $known->map(fn ($row) => $row->year.'/'.$row->month.'/'.$row->period_type)->unique()->count() > 1,
+            'mixed_periods' => $known->map(fn ($row) => $row->year.'/'.$row->month.'/'.$row->period_type.'/'.$row->income_basis.'/'.$row->period_start.'/'.$row->period_end)->unique()->count() > 1,
             'period_type' => $periodType,
         ];
     }

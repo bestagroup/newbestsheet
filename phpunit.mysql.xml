@@ -7,6 +7,7 @@
         <testsuite name="MySQL integration">
             <file>tests/Feature/EnterpriseIntegrationTest.php</file>
             <file>tests/Feature/FinancialStatementManagementTest.php</file>
+            <file>tests/Feature/FinancialStatementStandardizationTest.php</file>
         </testsuite>
     </testsuites>
     <source>

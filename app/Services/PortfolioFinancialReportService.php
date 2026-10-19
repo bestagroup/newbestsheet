@@ -5,8 +5,9 @@ namespace App\Services;
 use App\Models\Finance;
 use App\Models\Financial_statement;
 use App\Models\Project;
-use App\Support\Monetary;
+use App\Services\FinancialReporting\LatestStatementSelector;
 use App\Support\LocalizedInputNormalizer;
+use App\Support\Monetary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -15,7 +16,7 @@ class PortfolioFinancialReportService
     public function __construct(
         private readonly FinancialStatementMetricsService $metrics,
         private readonly OperationalAnalyticsService $operationalAnalytics,
-        private readonly \App\Services\FinancialReporting\LatestStatementSelector $selector,
+        private readonly LatestStatementSelector $selector,
         private readonly InvestmentFinancialChartsService $charts,
     ) {}
 
@@ -31,7 +32,7 @@ class PortfolioFinancialReportService
             ->activePortfolio()
             ->pluck('id');
 
-        $records = Financial_statement::query()
+        $records = Financial_statement::query()->consistentOwner()
             ->whereIn('project_id', $financialProjectIds)
             ->filter($request)
             ->orderBy('year')
@@ -95,7 +96,7 @@ class PortfolioFinancialReportService
             ->whereIn('id', $financialProjectIds)
             ->with([
                 'company:id,company_name',
-                'financialStatements' => fn ($query) => $query->filter($request, true)->orderBy('year')->orderBy('month'),
+                'financialStatements' => fn ($query) => $query->consistentOwner()->filter($request, true)->orderBy('year')->orderBy('month'),
                 'finances:id,project_id,amount',
                 'currentStep:id,title',
             ])

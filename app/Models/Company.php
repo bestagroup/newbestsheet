@@ -31,6 +31,11 @@ class Company extends Model
         'is_verified',
     ];
 
+    public function financialStatements()
+    {
+        return $this->hasMany(Financial_statement::class);
+    }
+
     public function members()
     {
         return $this->hasMany(CompanyMembers::class);

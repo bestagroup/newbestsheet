@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -29,6 +30,7 @@ class FinancialstatementController extends Controller
             $query = Financial_statement::query()
                 ->from('financial_statements as f')
                 ->join('projects as p', 'p.id', '=', 'f.project_id')
+                ->leftJoin('companies as owner', 'owner.id', '=', 'f.company_id')
                 ->where('p.invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
                 ->when($request->filled('project_id'), static function ($builder) use ($request): void {
                     $builder->where('f.project_id', $request->integer('project_id'));
@@ -38,7 +40,7 @@ class FinancialstatementController extends Controller
                 })
                 ->select([
                     'f.*',
-                    'p.company_name',
+                    DB::raw('COALESCE(owner.company_name, p.company_name) as company_name'),
                     'p.title as project_title',
                 ])
                 ->selectRaw('((f.year * 100) + f.month) as period_sort');
@@ -48,7 +50,7 @@ class FinancialstatementController extends Controller
                 ->editColumn('company_name', static fn ($row): string => (string) ($row->company_name ?: $row->project_title ?: '—'))
                 ->filterColumn('company_name', static function ($builder, string $keyword): void {
                     $builder->where(static function ($companyQuery) use ($keyword): void {
-                        $companyQuery->where('p.company_name', 'like', '%'.$keyword.'%')
+                        $companyQuery->where('owner.company_name', 'like', '%'.$keyword.'%')->orWhere('p.company_name', 'like', '%'.$keyword.'%')
                             ->orWhere('p.title', 'like', '%'.$keyword.'%');
                     });
                 });

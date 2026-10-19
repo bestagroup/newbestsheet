@@ -138,7 +138,7 @@ class CompanyController extends Controller
     public function destroy(Request $request, int $company): JsonResponse
     {
         $record = Company::query()->findOrFail($company);
-        abort_if($record->project()->exists() || $record->minute()->exists() || $record->MediaFile()->exists(), 409, 'شرکت دارای پرونده یا مستند است.');
+        abort_if($record->financialStatements()->exists() || $record->project()->exists() || $record->minute()->exists() || $record->MediaFile()->exists(), 409, 'شرکت دارای پرونده یا مستند است.');
         $record->delete();
 
         return $this->successResponse('شرکت حذف شد.');
