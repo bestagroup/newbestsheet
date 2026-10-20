@@ -5,6 +5,9 @@
     $selectedYear = old('year', data_get($statement, 'year'));
     $selectedMonth = old('month', data_get($statement, 'month', 12));
 @endphp
+@if($statement)
+    <input type="hidden" name="lock_version" value="{{ $statement->lock_version }}">
+@endif
 
 <div class="col-12">
     <div class="alert alert-primary d-flex align-items-start gap-2 mb-0" role="note">

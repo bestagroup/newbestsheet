@@ -21,6 +21,7 @@ final class FinancialStatementService
             $project = $this->lockProject((int) $data['project_id']);
             $data = $this->prepare($project, $data);
             $statement = Financial_statement::query()->create($data);
+            $statement->forceFill(['workflow_status' => 'draft', 'preparer_ids' => auth()->id() ? [auth()->id()] : []])->save();
             $this->audit->record($statement, 'created');
 
             return $statement;
@@ -31,12 +32,27 @@ final class FinancialStatementService
     {
         return $this->persist(function () use ($id, $data): Financial_statement {
             $statement = $this->lockStatement($id);
+            $this->assertEditable($statement);
+            if (isset($data['lock_version']) && (int) $data['lock_version'] !== $statement->lock_version) {
+                throw ValidationException::withMessages(['workflow' => 'سند تغییر کرده است؛ صفحه را تازه کنید.']);
+            }
+            if ($statement->approvedRevisions()->exists()) {
+                foreach (['year', 'month', 'period_type'] as $field) {
+                    if ((string) $data[$field] !== (string) $statement->{$field}) {
+                        throw ValidationException::withMessages([$field => 'هویت دوره در اصلاحیه تغییر نمی‌کند؛ دوره دیگر را جدا ثبت کنید.']);
+                    }
+                }
+            }
             if ((int) $statement->project_id !== (int) $data['project_id']) {
                 throw ValidationException::withMessages(['project_id' => 'انتقال صورت مالی ثبت‌شده به پرونده دیگر مجاز نیست.']);
             }
             $data = $this->prepare($this->lockProject((int) $statement->project_id), $data, $statement);
             $before = $statement->getAttributes();
             $statement->update($data);
+            $statement->forceFill([
+                'workflow_status' => 'draft', 'lock_version' => $statement->lock_version + 1,
+                'preparer_ids' => array_values(array_unique([...($statement->preparer_ids ?? []), ...(auth()->id() ? [auth()->id()] : [])])),
+            ])->save();
             $this->audit->record($statement, 'updated', $before);
 
             return $statement;
@@ -47,6 +63,10 @@ final class FinancialStatementService
     {
         DB::transaction(function () use ($id): void {
             $statement = $this->lockStatement($id);
+            $this->assertEditable($statement);
+            if ($statement->approvedRevisions()->exists()) {
+                throw ValidationException::withMessages(['workflow' => 'سند دارای نسخه تأییدشده قابل حذف نیست.']);
+            }
             $this->audit->record($statement, 'deleted', $statement->getAttributes());
             $statement->delete();
         }, 3);
@@ -57,6 +77,13 @@ final class FinancialStatementService
         // Historical portfolio records remain maintainable after exit.
         return Project::query()->where('invest_step', '>=', Project::PORTFOLIO_MINIMUM_STEP)
             ->lockForUpdate()->findOrFail($id);
+    }
+
+    private function assertEditable(Financial_statement $statement): void
+    {
+        if (! in_array($statement->workflow_status, ['draft', 'legacy'], true)) {
+            throw ValidationException::withMessages(['workflow' => 'سند ارسال‌شده یا تأییدشده قابل ویرایش و حذف نیست.']);
+        }
     }
 
     private function lockStatement(int $id): Financial_statement

@@ -41,6 +41,7 @@ class OrganizationalAccessSeeder extends Seeder
             'filemanager' => 'مدیریت مستندات طرح‌ها',
             'finance' => 'مدیریت پرداخت‌های سرمایه‌گذاری',
             'financialstatement' => 'مدیریت صورت‌های مالی پورتفو',
+            'financialstatement-review' => 'بررسی و تأیید صورت‌های مالی',
             'report' => 'گزارش‌ها و آمار مدیریتی',
             'employees' => 'مدیریت کارکنان و مدارک پرسنلی',
             'assets' => 'مدیریت کالاها و اموال',

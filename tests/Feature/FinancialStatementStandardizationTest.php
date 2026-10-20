@@ -125,6 +125,8 @@ class FinancialStatementStandardizationTest extends TestCase
         $service->create($this->data($b, ['income_basis' => 'ytd', 'period_start' => '1404/01/01', 'net_sales' => '500']));
         Financial_statement::create($this->data($hidden, ['month' => 9, 'period_start' => '1404/07/01', 'period_end' => '1404/09/30', 'net_sales' => '987654321.12']));
         $access = $this->mock(OperationalAnalyticsService::class);
+        // This suite exercises the v3.4 historical-data comparison contract.
+        DB::table('financial_statements')->update(['workflow_status' => 'legacy']);
         $access->shouldReceive('visibleProjectIds')->andReturn(collect([$a->id, $b->id]));
         $report = app(BoardFinancialChartsService::class)->build(Request::create('/', 'GET', ['chart_companies' => ['company:'.$a->company_id, 'company:'.$b->company_id]]));
         $charts = collect($report['charts']);

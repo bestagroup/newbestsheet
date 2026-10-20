@@ -48,6 +48,7 @@ class FinancialStatementRequest extends FormRequest
             ->ignore($statementId);
 
         $rules = [
+            'lock_version' => ['sometimes', 'integer', 'min:1'],
             'income_basis' => ['sometimes', 'required', Rule::in(['unconfirmed', 'standalone', 'ytd'])],
             'period_start' => ['nullable', 'string', 'max:10'],
             'period_end' => ['nullable', 'string', 'max:10'],

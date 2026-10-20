@@ -160,6 +160,9 @@ Route::middleware('admin')->namespace('App\Http\Controllers\Panel')->group(funct
     Route::middleware('resource.permission:financialstatement')->group(function () {
         Route::resource('panel/financialstatement', 'FinancialstatementController')->only(['index', 'store', 'edit', 'update', 'destroy']);
     });
+    Route::post('panel/financialstatement/{id}/review/{action}', 'FinancialStatementReviewController@update')
+        ->whereIn('action', ['submit', 'approve', 'return', 'revise'])->name('financialstatement.review');
+    Route::get('panel/financialstatement/{id}/revisions', 'FinancialStatementReviewController@show')->name('financialstatement.revisions');
 
     Route::middleware('resource.permission:employees')->group(function () {
         Route::resource('panel/employees', 'EmployeeController')

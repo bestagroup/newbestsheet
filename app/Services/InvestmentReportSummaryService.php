@@ -35,9 +35,9 @@ class InvestmentReportSummaryService
         $contract = Monetary::sum($projects->pluck('amount_request_accept'));
         $paid = Monetary::sum(Finance::query()->whereIn('project_id', $projects->pluck('id'))->pluck('amount'));
         $companyKeys = $projects->mapWithKeys(fn ($p) => [$p->id => $p->company_id ? 'company:'.$p->company_id : 'project:'.$p->id]);
-        $statements = Financial_statement::query()->consistentOwner()->whereIn('project_id', $projects->pluck('id'))
+        $statements = Financial_statement::query()->reportable()->consistentOwner()->whereIn('project_id', $projects->pluck('id'))
             ->when($periodType !== null, fn ($query) => $query->where('period_type', $periodType))
-            ->get(['id', 'project_id', 'year', 'month', 'period_type', 'net_profit', 'company_id', 'period_start', 'period_end', 'income_basis'])
+            ->get()->map(fn ($row) => $row->reportingVersion())->filter()
             ->groupBy(fn ($row) => $companyKeys[$row->project_id]);
         $selections = $statements->map(fn ($rows) => $this->selector->select($rows));
         $latest = $selections->pluck('statement')->filter()->values();
@@ -49,6 +49,7 @@ class InvestmentReportSummaryService
             'paid' => $paid,
             'remaining' => Monetary::difference($contract, $paid),
             'profit' => $known->isEmpty() ? null : Monetary::sum($known->pluck('net_profit')),
+            'unreviewed_companies' => $known->where('workflow_status', 'legacy')->count(),
             'unconfirmed_companies' => $known->filter(fn ($row) => ($row->income_basis ?? 'unconfirmed') === 'unconfirmed')->count(),
             'reported_companies' => $known->count(),
             'missing_companies' => $companyKeys->unique()->count() - $known->count(),

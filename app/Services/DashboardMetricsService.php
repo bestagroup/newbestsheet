@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Enums\InvestmentRole;
-use App\Support\LocalizedInputNormalizer;
-use App\Support\Monetary;
 use App\Models\AdministrativeAsset;
 use App\Models\Calendar;
 use App\Models\Company;
@@ -20,6 +18,8 @@ use App\Models\ProjectCommitment;
 use App\Models\QuarterlyPerformanceReport;
 use App\Models\User;
 use App\Models\User_logs;
+use App\Support\LocalizedInputNormalizer;
+use App\Support\Monetary;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -356,15 +356,17 @@ class DashboardMetricsService
             $cards->push($this->card('پرونده‌های دارای صورت مالی', (clone $statementQuery)->distinct()->count('project_id'), 'پوشش اطلاعات مالی پورتفو', 'mdi-domain', 'warning', route('financialstatement.index')));
 
             $items = $items->merge((clone $statementQuery)
+                ->reportable()->consistentOwner()
                 ->with('project:id,title')
                 ->orderByDesc('year')
                 ->orderByDesc('month')
                 ->limit(15)
                 ->get()
+                ->map(fn (Financial_statement $row) => $row->reportingVersion())->filter()
                 ->map(fn (Financial_statement $statement): array => [
                     'title' => $statement->project?->title ?: 'صورت مالی',
                     'subtitle' => 'دوره '.$statement->year.'/'.str_pad((string) $statement->month, 2, '0', STR_PAD_LEFT),
-                    'meta' => 'سود خالص: '.$this->money($statement->net_profit),
+                    'meta' => 'سود خالص: '.$this->money($statement->net_profit).' — '.($statement->workflow_status === 'legacy' ? 'تاریخی؛ بررسی‌نشده' : 'تأیید داخلی'),
                     'created_at' => $statement->created_at,
                     'url' => route('financialstatement.index'),
                     'kind' => 'صورت مالی',
@@ -577,6 +579,7 @@ class DashboardMetricsService
             default => $this->can(Auth::user(), 'assets') ? '۸ دسته اموال با بیشترین تعداد اقلام' : 'وضعیت همکاری کارکنان',
         };
         $chart['unit'] = $key === 'finance' ? 'ریال' : 'تعداد';
+
         return compact(
             'key', 'title', 'description', 'icon', 'tone', 'cards', 'items', 'chart',
             'itemsTitle', 'itemsDescription', 'searchPlaceholder'

@@ -95,13 +95,14 @@
             <div class="kpi-col"><div class="card kpi-card"><div class="card-content text-center">
                 <p class="kpi-value">{{ $investmentSummary['profit'] === null ? '—' : \App\Support\Monetary::format($investmentSummary['profit']) }}</p>
                 <p class="kpi-label">سود و زیان آخرین دوره کل شرکت‌ها</p>
+                @if($investmentSummary['unreviewed_companies'])<small class="text-warning d-block">{{ $investmentSummary['unreviewed_companies'] }} شرکت دارای سند تاریخی بررسی‌نشده است؛ این مبلغ صرفاً متکی به اسناد تأییدشده نیست.</small>@endif
                 <small class="text-muted">ریال؛ {{ $investmentSummary['reported_companies'] }} شرکت دارای سود و زیان قابل محاسبه و {{ $investmentSummary['missing_companies'] }} شرکت فاقد مبلغ معتبر یا دارای سند مبهم</small>
                 @if($investmentSummary['conflicting_companies'])<small class="text-warning d-block">{{ $investmentSummary['conflicting_companies'] }} شرکت دارای صورت مالی تکراری در آخرین دوره است.</small>@endif
                 @if($investmentSummary['unconfirmed_companies'])<small class="text-warning d-block">مبنای سود و زیان {{ $investmentSummary['unconfirmed_companies'] }} شرکت تعیین نشده است؛ جمع ارقام گزارش تجمیعی حسابرسی‌شده نیست.</small>@endif
                 @if($investmentSummary['mixed_periods'])<small class="text-warning d-block">تاریخ، طول یا مبنای آخرین دوره شرکت‌ها متفاوت است؛ این مبلغ جمع هم‌دوره نیست.</small>@endif
             </div></div></div>
         </div>
-        <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین دوره ثبت‌شده هر شرکت است؛ در تاریخ یکسان، اولویت با سالانه، سپس فصلی و سپس قدیمی است. اقلام ناموجود و اسناد تکراری در جمع لحاظ نمی‌شوند. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
+        <p class="text-muted small">مبالغ مربوط به پورتفوی فعال در محدوده دسترسی شما و تجمعی تا اکنون هستند؛ مستقل از فیلتر شرکت و تاریخ. سود و زیان جمع آخرین دوره قابل گزارش هر شرکت است؛ پیش‌نویس جدید نمایش داده نمی‌شود و تا تأیید اصلاحیه، نسخه مصوب قبل مبناست. اسناد تاریخی بررسی‌نشده با هشدار باقی می‌مانند. در تاریخ یکسان، اولویت با سالانه، سپس فصلی و سپس قدیمی است. اقلام ناموجود و اسناد تکراری در جمع لحاظ نمی‌شوند. مانده منفی نشان‌دهنده پرداخت بیش از مجموع قراردادهاست.</p>
 
         @include('panel.partials.operational-report')
         @include('panel.partials.board-financial-charts')
@@ -150,7 +151,7 @@
                                 <td>{{ \App\Support\Monetary::format($row['paid_amount']) }}</td>
                                 <td>{{ \App\Support\Monetary::format($row['remaining_amount']) }}</td>
                                 <td>{{ number_format($row['funding_percent'], 1) }}٪</td>
-                                <td>{{ $row['latest_period'] ?: '—' }}</td>
+                                <td>{{ $row['latest_period'] ?: '—' }}<small class="d-block text-muted">{{ ['approved' => 'تأیید داخلی', 'legacy' => 'تاریخی؛ بررسی‌نشده'][$row['review_status']] ?? 'فاقد سند قابل گزارش' }}</small></td>
                                 <td>{{ $row['net_sales'] === null ? '—' : \App\Support\Monetary::format($row['net_sales']) }}</td>
                                 <td class="{{ $row['net_profit'] < 0 ? 'text-danger' : 'text-success' }}">{{ $row['net_profit'] === null ? '—' : \App\Support\Monetary::format($row['net_profit']) }}</td>
                                 <td>{{ number_format($row['current_ratio'], 2) }}</td>

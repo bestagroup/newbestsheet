@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Events\CorrespondenceRefresh;
 use App\Events\InvestmentStepTransitioned;
 use App\Events\MessageSent;
-use App\Models\Calendar;
-use App\Models\Employee;
 use App\Models\AdministrativeAsset;
+use App\Models\Calendar;
+use App\Models\Company;
+use App\Models\Employee;
 use App\Models\ExternalLetter;
 use App\Models\Finance;
 use App\Models\Financial_statement;
@@ -16,16 +17,20 @@ use App\Models\PortfolioMeeting;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\EnterpriseRecordAccess;
 use App\Services\FinanceService;
 use App\Services\GoogleCalendarSyncService;
 use App\Services\GovernanceService;
+use App\Services\InvestmentReportSummaryService;
 use App\Services\PortfolioFinancialReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class EnterpriseIntegrationTest extends TestCase
@@ -104,8 +109,8 @@ class EnterpriseIntegrationTest extends TestCase
         $this->post('/panel/filemanager', ['file' => UploadedFile::fake()->image('private.png')])->assertOk();
         $media = MediaFile::query()->firstOrFail();
         $other = $this->user('expert');
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
-        app(\App\Services\EnterpriseRecordAccess::class)->assertAttachment($media->id, null, $other);
+        $this->expectException(HttpException::class);
+        app(EnterpriseRecordAccess::class)->assertAttachment($media->id, null, $other);
     }
 
     public function test_real_install_and_reference_data_are_idempotent(): void
@@ -388,9 +393,11 @@ class EnterpriseIntegrationTest extends TestCase
 
     public function test_report_summary_uses_business_stage_boundaries_and_latest_profit(): void
     {
-        $service = app(\App\Services\InvestmentReportSummaryService::class);
+        $service = app(InvestmentReportSummaryService::class);
         $before = $service->build($this->admin, 'annual')['counts'];
-        foreach ([5, 6, 13, 20] as $step) { $this->project($step); }
+        foreach ([5, 6, 13, 20] as $step) {
+            $this->project($step);
+        }
         $rejected = $this->project(18);
         $rejected->update(['is_rejected' => 1, 'amount_request_accept' => '99999']);
         $a = $this->project(14);
@@ -400,7 +407,7 @@ class EnterpriseIntegrationTest extends TestCase
         $this->project(17); // No statement: must count as missing, not zero profit.
         Finance::query()->create(array_replace($this->payment($a), ['amount' => '3500']));
         foreach ([[$a, 1404, '900'], [$a, 1405, '-100'], [$b, 1404, '300']] as [$p, $year, $profit]) {
-            Financial_statement::query()->create(['project_id' => $p->id, 'period_type' => 'annual', 'year' => $year, 'month' => 12, 'net_profit' => $profit]);
+            Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $p->id, 'period_type' => 'annual', 'year' => $year, 'month' => 12, 'net_profit' => $profit]);
         }
         $result = $service->build($this->admin, 'annual');
         $this->assertSame($before['projects'] + 8, $result['counts']['projects']);
@@ -425,48 +432,51 @@ class EnterpriseIntegrationTest extends TestCase
         $rejected->update(['is_rejected' => 1]);
         foreach ([$active, $exited, $rejected] as $project) {
             foreach ([1404, 1405] as $year) {
-                Financial_statement::query()->create(['project_id'=>$project->id, 'period_type'=>'annual', 'year'=>$year, 'month'=>12, 'net_sales'=>'100', 'net_profit'=>'-20']);
+                Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $project->id, 'period_type' => 'annual', 'year' => $year, 'month' => 12, 'net_sales' => '100', 'net_profit' => '-20']);
             }
         }
-        $this->get('/panel/report?'.http_build_query(['period_type'=>'annual','from_date'=>'۱۴۰۵/۰۱/۰۱']))
+        $this->get('/panel/report?'.http_build_query(['period_type' => 'annual', 'from_date' => '۱۴۰۵/۰۱/۰۱']))
             ->assertOk()->assertSee('گزارش مالی شرکت‌ها برای مدیرعامل و هیئت‌مدیره')->assertSee('شرکت‌ها برای مقایسه')
             ->assertViewHas('financialCharts', fn ($data) => $data['expected'] === 1
                 && count($data['periods']) === 1 && $data['periods'][0]['period'] === '1405/12'
                 && $data['periods'][0]['profit'] === '-20');
     }
 
-
     public function test_board_comparison_aligns_three_companies_and_all_periods_without_mixing_types(): void
     {
-        $a=$this->project(14);$b=$this->project(15);$c=$this->project(19);
-        foreach ([[$a,1398,3,'quarterly','100'],[$a,1405,6,'quarterly','200'],[$b,1405,3,'quarterly','300'],[$c,1405,6,'quarterly','-50'],[$a,1405,6,'annual','999']] as [$p,$year,$month,$type,$value]) {
-            Financial_statement::query()->create(['project_id'=>$p->id,'year'=>$year,'month'=>$month,'period_type'=>$type,'net_sales'=>$value,'net_profit'=>$value]);
+        $a = $this->project(14);
+        $b = $this->project(15);
+        $c = $this->project(19);
+        foreach ([[$a, 1398, 3, 'quarterly', '100'], [$a, 1405, 6, 'quarterly', '200'], [$b, 1405, 3, 'quarterly', '300'], [$c, 1405, 6, 'quarterly', '-50'], [$a, 1405, 6, 'annual', '999']] as [$p,$year,$month,$type,$value]) {
+            Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $p->id, 'year' => $year, 'month' => $month, 'period_type' => $type, 'net_sales' => $value, 'net_profit' => $value]);
         }
-        $this->get('/panel/report?'.http_build_query(['chart_companies'=>['project:'.$a->id,'project:'.$b->id,'project:'.$c->id]]))->assertOk()
-            ->assertDontSee('name="chart_period"',false)->assertDontSee('name="income_basis"',false)
+        $this->get('/panel/report?'.http_build_query(['chart_companies' => ['project:'.$a->id, 'project:'.$b->id, 'project:'.$c->id]]))->assertOk()
+            ->assertDontSee('name="chart_period"', false)->assertDontSee('name="income_basis"', false)
             ->assertViewHas('boardCharts', function ($data) {
-                $quarter=collect($data['charts'])->firstWhere('id','quarterly-sales');
-                $annual=collect($data['charts'])->firstWhere('id','annual-sales');
-                return count($data['selectedCompanies'])===3 && $quarter['labels']===['1398/03','1405/03','1405/06']
-                    && $quarter['series'][0]['values']===['100',null,'200']
-                    && $quarter['series'][1]['values']===[null,'300',null]
-                    && $quarter['series'][2]['values']===[null,null,'-50']
-                    && $annual['series'][0]['values']===['999'];
+                $quarter = collect($data['charts'])->firstWhere('id', 'quarterly-sales');
+                $annual = collect($data['charts'])->firstWhere('id', 'annual-sales');
+
+                return count($data['selectedCompanies']) === 3 && $quarter['labels'] === ['1398/03', '1405/03', '1405/06']
+                    && $quarter['series'][0]['values'] === ['100', null, '200']
+                    && $quarter['series'][1]['values'] === [null, '300', null]
+                    && $quarter['series'][2]['values'] === [null, null, '-50']
+                    && $annual['series'][0]['values'] === ['999'];
             });
     }
 
     public function test_board_comparison_preserves_exact_values_and_rejects_any_inactive_selection(): void
     {
-        $a=$this->project(14);$exited=$this->project(20);
-        Financial_statement::query()->create(['project_id'=>$a->id,'year'=>1405,'month'=>12,'period_type'=>'annual','net_sales'=>'9007199254740993','net_profit'=>'0','total_current_liabilities'=>'0']);
-        $this->get('/panel/report?'.http_build_query(['chart_companies'=>['project:'.$a->id,'project:'.$a->id]]))->assertOk()
+        $a = $this->project(14);
+        $exited = $this->project(20);
+        Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $a->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_sales' => '9007199254740993', 'net_profit' => '0', 'total_current_liabilities' => '0']);
+        $this->get('/panel/report?'.http_build_query(['chart_companies' => ['project:'.$a->id, 'project:'.$a->id]]))->assertOk()
             ->assertViewHas('boardCharts', function ($data) {
-                return count($data['selectedCompanies'])===1
-                    && collect($data['charts'])->firstWhere('id','annual-sales')['series'][0]['values']===['9007199254740993']
-                    && collect($data['charts'])->firstWhere('id','annual-profit')['series'][0]['values']===['0']
-                    && collect($data['charts'])->firstWhere('id','annual-current')['series'][0]['values']===[null];
+                return count($data['selectedCompanies']) === 1
+                    && collect($data['charts'])->firstWhere('id', 'annual-sales')['series'][0]['values'] === ['9007199254740993']
+                    && collect($data['charts'])->firstWhere('id', 'annual-profit')['series'][0]['values'] === ['0']
+                    && collect($data['charts'])->firstWhere('id', 'annual-current')['series'][0]['values'] === [null];
             });
-        $this->get('/panel/report?'.http_build_query(['chart_companies'=>['project:'.$a->id,'project:'.$exited->id]]))->assertNotFound();
+        $this->get('/panel/report?'.http_build_query(['chart_companies' => ['project:'.$a->id, 'project:'.$exited->id]]))->assertNotFound();
     }
 
     public function test_latest_profit_includes_modern_periods_and_preserves_unknown_values(): void
@@ -474,12 +484,10 @@ class EnterpriseIntegrationTest extends TestCase
         $a = $this->project();
         $b = $this->project();
         foreach ([[$a, 1404, 'legacy', '999'], [$a, 1405, 'quarterly', '20'], [$a, 1405, 'annual', '9007199254740993'], [$b, 1405, 'annual', null]] as [$project, $year, $type, $profit]) {
-            Financial_statement::query()->create(['project_id' => $project->id, 'year' => $year, 'month' => 12, 'period_type' => $type, 'net_profit' => $profit]);
+            Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $project->id, 'year' => $year, 'month' => 12, 'period_type' => $type, 'net_profit' => $profit]);
         }
-        $this->get('/panel/report')->assertOk()->assertViewHas('investmentSummary', fn ($summary) =>
-            $summary['profit'] === '9007199254740993' && $summary['reported_companies'] === 1 && $summary['missing_companies'] === 1);
-        $this->get('/panel/report')->assertViewHas('portfolioRows', fn ($rows) =>
-            $rows->firstWhere('project_id', $a->id)['net_profit'] === '9007199254740993'
+        $this->get('/panel/report')->assertOk()->assertViewHas('investmentSummary', fn ($summary) => $summary['profit'] === '9007199254740993' && $summary['reported_companies'] === 1 && $summary['missing_companies'] === 1);
+        $this->get('/panel/report')->assertViewHas('portfolioRows', fn ($rows) => $rows->firstWhere('project_id', $a->id)['net_profit'] === '9007199254740993'
             && $rows->firstWhere('project_id', $b->id)['net_profit'] === null);
     }
 
@@ -498,7 +506,7 @@ class EnterpriseIntegrationTest extends TestCase
     {
         $project = $this->project();
         $other = $this->project();
-        $statement = Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => '10']);
+        $statement = Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => '10']);
         $this->patchJson('/panel/financialstatement/'.$statement->id, ['project_id' => $other->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual'])->assertUnprocessable()->assertJsonValidationErrors('project_id');
         $this->assertDatabaseHas('financial_statements', ['id' => $statement->id, 'project_id' => $project->id, 'net_profit' => '10']);
     }
@@ -506,34 +514,34 @@ class EnterpriseIntegrationTest extends TestCase
     public function test_business_integrity_migration_can_resume_after_partial_creation(): void
     {
         $project = $this->project();
-        $statement = Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
+        $statement = Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
         // InnoDB needs an index starting with project_id for the foreign key.
         // Install its replacement before dropping the current composite index.
-        \Illuminate\Support\Facades\Schema::table('financial_statements', function ($table) {
+        Schema::table('financial_statements', function ($table) {
             $table->unique(['project_id', 'year', 'month'], 'fs_project_period_unique');
         });
-        \Illuminate\Support\Facades\Schema::table('financial_statements', function ($table) {
+        Schema::table('financial_statements', function ($table) {
             $table->dropUnique('fs_project_period_type_unique');
             $table->dropColumn('period_type');
         });
-        \Illuminate\Support\Facades\Schema::table('business_audits', fn ($table) => $table->dropIndex('business_audits_subject_type_subject_id_index'));
+        Schema::table('business_audits', fn ($table) => $table->dropIndex('business_audits_subject_type_subject_id_index'));
         $migration = require database_path('migrations/2026_10_08_000001_add_business_integrity.php');
         $migration->up();
         $migration->up();
         $this->assertDatabaseHas('financial_statements', ['id' => $statement->id, 'period_type' => 'legacy', 'net_sales' => '9007199254740993']);
-        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('financial_statements', 'period_type'));
-        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasIndex('financial_statements', 'fs_project_period_type_unique', 'unique'));
+        $this->assertTrue(Schema::hasColumn('financial_statements', 'period_type'));
+        $this->assertTrue(Schema::hasIndex('financial_statements', 'fs_project_period_type_unique', 'unique'));
     }
 
     public function test_duplicate_company_statement_is_flagged_instead_of_arbitrarily_selected(): void
     {
-        $company = \App\Models\Company::query()->create(['company_name' => 'Shared company']);
+        $company = Company::query()->create(['company_name' => 'Shared company']);
         foreach (['10', '20'] as $amount) {
             $project = $this->project();
             $project->update(['company_id' => $company->id]);
-            Financial_statement::query()->create(['project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => $amount]);
+            Financial_statement::query()->forceCreate(['workflow_status' => 'legacy', 'project_id' => $project->id, 'year' => 1405, 'month' => 12, 'period_type' => 'annual', 'net_profit' => $amount]);
         }
-        $summary = app(\App\Services\InvestmentReportSummaryService::class)->build($this->admin);
+        $summary = app(InvestmentReportSummaryService::class)->build($this->admin);
         $this->assertNull($summary['profit']);
         $this->assertSame(1, $summary['conflicting_companies']);
         $this->assertSame(1, $summary['missing_companies']);

@@ -32,12 +32,12 @@ class PortfolioFinancialReportService
             ->activePortfolio()
             ->pluck('id');
 
-        $records = Financial_statement::query()->consistentOwner()
+        $records = Financial_statement::query()->reportable()->consistentOwner()
             ->whereIn('project_id', $financialProjectIds)
             ->filter($request)
             ->orderBy('year')
             ->orderBy('month')
-            ->get();
+            ->get()->map(fn ($row) => $row->reportingVersion())->filter()->values();
 
         $chartRecords = $records;
 
@@ -96,7 +96,7 @@ class PortfolioFinancialReportService
             ->whereIn('id', $financialProjectIds)
             ->with([
                 'company:id,company_name',
-                'financialStatements' => fn ($query) => $query->consistentOwner()->filter($request, true)->orderBy('year')->orderBy('month'),
+                'financialStatements' => fn ($query) => $query->reportable()->consistentOwner()->filter($request, true)->orderBy('year')->orderBy('month'),
                 'finances:id,project_id,amount',
                 'currentStep:id,title',
             ])
@@ -110,7 +110,7 @@ class PortfolioFinancialReportService
         $portfolioRows = $projects->map(function (Project $project) use ($riskMap): array {
             $paid = Monetary::sum($project->finances->pluck('amount'));
             $contract = (string) Monetary::value($project->amount_request_accept);
-            $selected = $this->selector->select($project->financialStatements)['statement'];
+            $selected = $this->selector->select($project->financialStatements->map(fn ($row) => $row->reportingVersion())->filter())['statement'];
             $statement = $this->metrics->build(collect($selected ? [$selected] : []))['summary'];
 
             $risk = $riskMap[(int) $project->id] ?? ['overdue_kpis' => 0, 'overdue_commitments' => 0, 'level' => 'normal'];
@@ -131,6 +131,7 @@ class PortfolioFinancialReportService
                 'funding_percent' => $contract > 0 ? round(($paid / $contract) * 100, 2) : 0,
                 'latest_period' => $selected ? $statement['period'].' — '.(['annual' => 'سالانه', 'quarterly' => 'فصلی', 'legacy' => 'قدیمی'][$selected->period_type]) : null,
                 'net_sales' => $selected?->net_sales,
+                'review_status' => $selected?->workflow_status,
                 'net_profit' => $selected?->net_profit,
                 'current_ratio' => $statement['current_ratio'],
                 'debt_to_equity' => $statement['debt_to_equity'],

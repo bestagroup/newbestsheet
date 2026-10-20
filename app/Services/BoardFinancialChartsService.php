@@ -32,10 +32,13 @@ final class BoardFinancialChartsService
         }
         $projectKeys = $projects->mapWithKeys(fn ($p) => [$p->id => $p->company_id ? 'company:'.$p->company_id : 'project:'.$p->id]);
         $ids = $groups->toBase()->only($selectedCompanies)->flatten(1)->pluck('id');
-        $statements = Financial_statement::query()->whereIn('project_id', $ids)->whereNotNull('year')->whereBetween('month', [1, 12])
-            ->orderBy('year')->orderBy('month')->orderBy('id')->get();
+        $statements = Financial_statement::query()->reportable()->whereIn('project_id', $ids)->whereNotNull('year')->whereBetween('month', [1, 12])
+            ->orderBy('year')->orderBy('month')->orderBy('id')->get()->map(fn ($row) => $row->reportingVersion())->filter();
         $charts = [];
         $notes = [];
+        if ($statements->contains('workflow_status', 'legacy')) {
+            $notes[] = 'گزارش شامل اسناد تاریخی بررسی‌نشده است؛ این اسناد تأیید داخلی نشده‌اند. پیش‌نویس‌های جدید در نمودار نیستند و اصلاحیه تا تأیید جای نسخه مصوب را نمی‌گیرد.';
+        }
         $owners = $projects->pluck('company_id', 'id');
         $statements = $statements->filter(function ($row) use ($owners, &$notes) {
             if ($row->company_id && (int) $row->company_id !== (int) $owners[$row->project_id]) {
@@ -141,6 +144,6 @@ final class BoardFinancialChartsService
 
     private function difference(?string $a, ?string $b): ?string
     {
-        return $a === null || $b === null ? null : Monetary::difference($a,$b);
+        return $a === null || $b === null ? null : Monetary::difference($a, $b);
     }
 }

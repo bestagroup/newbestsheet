@@ -62,13 +62,30 @@ class FinancialstatementController extends Controller
 
                     $buttons .= '<button type="button" class="'.$base.' btn-outline-secondary statement-view-btn" title="مشاهده جزئیات" aria-label="مشاهده جزئیات"><i class="mdi mdi-eye-outline"></i></button>';
 
-                    if (Gate::allows('can-access', ['financialstatement', 'edit'])) {
+                    if (in_array($row->workflow_status, ['draft', 'legacy'], true) && Gate::allows('can-access', ['financialstatement', 'edit'])) {
                         $buttons .= '<button type="button" class="'.$base.' btn-outline-primary edit-btn" data-id="'.$row->id.'" data-url="'.route('financialstatement.edit', $row->id).'" title="ویرایش صورت مالی" aria-label="ویرایش صورت مالی"><i class="mdi mdi-pencil-outline"></i></button>';
                     }
 
-                    if (Gate::allows('can-access', ['financialstatement', 'delete'])) {
+                    if (in_array($row->workflow_status, ['draft', 'legacy'], true) && $row->revision === 1 && Gate::allows('can-access', ['financialstatement', 'delete'])) {
                         $buttons .= '<button type="button" class="'.$base.' btn-outline-danger delete-btn" data-id="'.$row->id.'" data-url="'.route('financialstatement.destroy', $row->id).'" title="حذف صورت مالی" aria-label="حذف صورت مالی"><i class="mdi mdi-delete-outline"></i></button>';
                     }
+
+                    $actions = [];
+                    if (Gate::allows('can-access', ['financialstatement', 'edit'])) {
+                        if (in_array($row->workflow_status, ['draft', 'legacy'], true)) {
+                            $actions['submit'] = 'ارسال برای بررسی';
+                        }
+                        if ($row->workflow_status === 'approved') {
+                            $actions['revise'] = 'ایجاد اصلاحیه';
+                        }
+                    }
+                    if ($row->workflow_status === 'submitted' && Gate::allows('can-access', ['financialstatement-review', 'edit'])) {
+                        $actions += ['approve' => 'تأیید', 'return' => 'بازگشت برای اصلاح'];
+                    }
+                    foreach ($actions as $action => $label) {
+                        $buttons .= '<button type="button" class="btn btn-sm btn-outline-primary statement-review-btn" data-action="'.$action.'" data-url="'.route('financialstatement.review', ['id' => $row->id, 'action' => $action]).'">'.$label.'</button>';
+                    }
+                    $buttons .= '<button type="button" class="btn btn-sm btn-outline-secondary statement-history-btn" data-url="'.route('financialstatement.revisions', $row->id).'">نسخه‌های مصوب</button>';
 
                     return $buttons.'</div>';
                 })

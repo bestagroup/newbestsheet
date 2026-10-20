@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.5.0 — 2026-10-20
+
+- Introduce draft, submitted and approved financial review states, preserving legacy records as explicitly unreviewed.
+- Separate review authorization from editing; prevent every known preparer and submitter from reviewing their own revision, including superadmins.
+- Store immutable approved snapshots and audited correction revisions; report the last approved version while corrections are pending.
+- Validate required financial totals, exact balance equality and period/ownership integrity at submission and approval.
+- Add optimistic workflow concurrency checks, mandatory return/correction reasons and review history UI.
+- Apply reporting versions consistently to board charts, totals, portfolio exports and financial dashboard items.
+- Add resumable migration and SQLite/MySQL workflow, authorization, snapshot and rollback tests.
+
 ## 3.4.0 — 2026-10-19
 
 - Add resumable, non-destructive company ownership and explicit Solar Hijri period metadata migration.

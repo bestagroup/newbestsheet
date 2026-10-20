@@ -8,6 +8,7 @@
             <file>tests/Feature/EnterpriseIntegrationTest.php</file>
             <file>tests/Feature/FinancialStatementManagementTest.php</file>
             <file>tests/Feature/FinancialStatementStandardizationTest.php</file>
+            <file>tests/Feature/FinancialStatementReviewTest.php</file>
         </testsuite>
     </testsuites>
     <source>

@@ -87,7 +87,7 @@ class PersonalizedDashboardTest extends TestCase
             'amount' => 2500000,
             'date' => Jalalian::fromCarbon(now())->format('Y-m-d'),
         ]);
-        Financial_statement::query()->create([
+        Financial_statement::query()->forceCreate(['workflow_status' => 'legacy',
             'project_id' => $project->id,
             'year' => (int) Jalalian::fromCarbon(now())->format('Y'),
             'month' => 6,

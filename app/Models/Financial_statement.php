@@ -118,6 +118,9 @@ class Financial_statement extends Model
     ];
 
     protected $casts = [
+        'revision' => 'integer',
+        'lock_version' => 'integer',
+        'preparer_ids' => 'array',
         'project_id' => 'integer',
         'company_id' => 'integer',
         'year' => 'integer',
@@ -127,6 +130,55 @@ class Financial_statement extends Model
     public static function monetaryFields(): array
     {
         return self::MONETARY_FIELDS;
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $row): void {
+            if (in_array($row->getOriginal('workflow_status'), ['submitted', 'approved'], true) && $row->isDirty(self::snapshotFields())) {
+                throw new \LogicException('Submitted and approved financial content is locked.');
+            }
+        });
+        static::deleting(function (self $row): void {
+            if (in_array($row->workflow_status, ['submitted', 'approved'], true) || $row->approvedRevisions()->exists()) {
+                throw new \LogicException('Reviewed financial history cannot be deleted.');
+            }
+        });
+    }
+
+    public static function snapshotFields(): array
+    {
+        return ['project_id', 'company_id', 'year', 'month', 'period_type', 'period_start', 'period_end', 'income_basis', ...self::MONETARY_FIELDS];
+    }
+
+    public function approvedRevisions()
+    {
+        return $this->hasMany(FinancialStatementRevision::class);
+    }
+
+    public function latestApprovedRevision()
+    {
+        return $this->hasOne(FinancialStatementRevision::class)->latestOfMany('revision');
+    }
+
+    public function scopeReportable(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->where('workflow_status', 'legacy')->orWhereHas('approvedRevisions'))
+            ->with('latestApprovedRevision');
+    }
+
+    /** Project immutable approved data; draft corrections never replace published values. */
+    public function reportingVersion(): ?self
+    {
+        $snapshot = $this->latestApprovedRevision;
+        if ($snapshot) {
+            $copy = clone $this;
+            $copy->setRawAttributes(array_replace($this->getAttributes(), $snapshot->payload, ['workflow_status' => 'approved', 'revision' => $snapshot->revision]), true);
+
+            return $copy;
+        }
+
+        return $this->workflow_status === 'legacy' ? $this : null;
     }
 
     public static function fieldGroups(): array

@@ -130,7 +130,7 @@ class FinancialStatementManagementTest extends TestCase
 
     private function statement(Project $project, int $year, int $month, string $netSales): Financial_statement
     {
-        return Financial_statement::query()->create([
+        return Financial_statement::query()->forceCreate(['workflow_status' => 'legacy',
             'project_id' => $project->id,
             'year' => $year,
             'month' => $month,

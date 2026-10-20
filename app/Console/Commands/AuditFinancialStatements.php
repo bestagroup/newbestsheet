@@ -25,10 +25,13 @@ class AuditFinancialStatements extends Command
         $issues = [];
         $seen = [];
         $count = 0;
-        DB::table('financial_statements')->orderBy('id')->chunkById(500, function ($rows) use (&$issues, &$seen, &$count, $hasOwner): void {
+        $workflowCounts = [];
+        DB::table('financial_statements')->orderBy('id')->chunkById(500, function ($rows) use (&$issues, &$seen, &$count, &$workflowCounts, $hasOwner): void {
             $projects = DB::table('projects')->whereIn('id', $rows->pluck('project_id'))->get(['id', 'company_id'])->keyBy('id');
             foreach ($rows as $row) {
                 $count++;
+                $status = $row->workflow_status ?? 'legacy';
+                $workflowCounts[$status] = ($workflowCounts[$status] ?? 0) + 1;
                 $project = $projects->get($row->project_id);
                 $owner = $row->company_id ?? $project?->company_id;
                 $codes = [];
@@ -63,7 +66,7 @@ class AuditFinancialStatements extends Command
             }
         });
         $duplicates = array_filter($seen, fn ($ids) => count($ids) > 1);
-        $report = ['records' => $count, 'metadata_schema_present' => $hasOwner, 'issues' => $issues, 'duplicate_groups' => $duplicates];
+        $report = ['records' => $count, 'metadata_schema_present' => $hasOwner, 'workflow_counts' => $workflowCounts, 'issues' => $issues, 'duplicate_groups' => $duplicates];
         if ($this->option('json')) {
             $this->line(json_encode($report, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
         } else {

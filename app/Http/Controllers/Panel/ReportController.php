@@ -107,7 +107,7 @@ class ReportController extends Controller
         return match ($type) {
             'portfolio' => $this->csvResponse(
                 'portfolio-report.csv',
-                ['شرکت', 'طرح', 'پیشرفت', 'مرحله جاری', 'ارزش قرارداد', 'پرداخت‌شده', 'مانده تعهد', 'KPI معوق', 'تعهد معوق', 'آخرین دوره', 'فروش خالص', 'سود خالص'],
+                ['شرکت', 'طرح', 'پیشرفت', 'مرحله جاری', 'ارزش قرارداد', 'پرداخت‌شده', 'مانده تعهد', 'KPI معوق', 'تعهد معوق', 'آخرین دوره', 'فروش خالص', 'سود خالص', 'وضعیت بررسی صورت مالی'],
                 $this->reportService->build($request)['portfolioRows']->map(static fn (array $row): array => [
                     $row['company_name'],
                     $row['project_title'],
@@ -121,6 +121,7 @@ class ReportController extends Controller
                     $row['latest_period'] ?: '—',
                     $row['net_sales'],
                     $row['net_profit'],
+                    ['approved' => 'تأیید داخلی', 'legacy' => 'تاریخی؛ بررسی‌نشده'][$row['review_status']] ?? 'فاقد سند قابل گزارش',
                 ])
             ),
             'sla' => $this->csvResponse(

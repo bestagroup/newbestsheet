@@ -500,9 +500,10 @@
                         data: 'period',
                         name: 'period_sort',
                         searchable: false,
-                        render: function (value, type) {
+                        render: function (value, type, row) {
                             if (type !== 'display') return value;
-                            return `<span class="statement-period"><i class="mdi mdi-calendar-month-outline"></i>${escapeHtml(value)}</span>`;
+                            const status = {legacy: 'تاریخی؛ بررسی‌نشده', draft: 'پیش‌نویس', submitted: 'در انتظار بررسی', approved: 'تأیید داخلی'}[row.workflow_status] || 'نامشخص';
+                            return `<span class="statement-period"><i class="mdi mdi-calendar-month-outline"></i>${escapeHtml(value)}</span><small class="d-block">${escapeHtml(status)} — نسخه ${escapeHtml(row.revision)}</small>`;
                         }
                     },
                     {data: 'net_sales', name: 'f.net_sales', orderable: false, searchable: false, className: 'statement-col-medium', render: renderAmount},
@@ -556,7 +557,7 @@
                     </div>`;
                 }).join('');
 
-                $('#detailsModalBody').html(`<div class="row g-3">${groupsHtml}</div>`);
+                $('#detailsModalBody').html(`<p class="text-muted">${escapeHtml(row.review_note || '')}</p><div class="row g-3">${groupsHtml}</div>`);
                 detailsModal.show();
             });
 
@@ -568,6 +569,40 @@
                 $.get(url)
                     .done(html => $('#editModalBody').html(html))
                     .fail(xhr => $('#editModalBody').html(`<div class="alert alert-danger m-0">${escapeHtml(responseError(xhr))}</div>`));
+            });
+
+            $(document).on('click', '.statement-review-btn', function () {
+                const button = this;
+                const row = table.row($(this).closest('tr')).data();
+                const action = $(this).data('action');
+                let note = null;
+                if (['return', 'revise'].includes(action)) {
+                    note = window.prompt('دلیل بازگشت یا ایجاد اصلاحیه را وارد کنید:');
+                    if (!note?.trim()) return;
+                } else if (!window.confirm(action === 'approve' ? 'تأیید داخلی این نسخه انجام شود؟ سند قفل و مبنای گزارش می‌شود.' : 'سند برای بررسی ارسال و تا تصمیم بررسی‌کننده قفل شود؟')) return;
+                button.disabled = true;
+                $.ajax({url: $(button).data('url'), method: 'POST', headers: {'X-CSRF-TOKEN': csrfToken}, data: {lock_version: row.lock_version, note}})
+                    .done(response => { notify(response.message); table.ajax.reload(null, false); })
+                    .fail(xhr => notify(responseError(xhr), 'error'))
+                    .always(() => { button.disabled = false; });
+            });
+
+            $(document).on('click', '.statement-history-btn', function () {
+                $('#detailsModalLabel').text('نسخه‌های تأییدشده؛ فقط خواندنی');
+                $('#detailsModalPeriod').text('تأیید داخلی جایگزین حسابرسی مستقل نیست.');
+                $('#detailsModalBody').text('در حال دریافت نسخه‌ها...');
+                detailsModal.show();
+                $.get($(this).data('url')).done(response => {
+                    const html = response.revisions.map(revision => {
+                        const data = revision.payload;
+                        const fields = Object.values(fieldGroups).flatMap(group => Object.entries(group));
+                        const amounts = fields.map(([key, label]) => `<tr><td>${escapeHtml(label)}</td><td dir="ltr">${escapeHtml(amountText(data[key]))}</td></tr>`).join('');
+                        return `<details class="mb-3"><summary>نسخه ${escapeHtml(revision.revision)} — تأییدکننده #${escapeHtml(revision.approved_by)} — ${escapeHtml(revision.approved_at)}</summary><p>${escapeHtml(data.period_start)} تا ${escapeHtml(data.period_end)} — ${escapeHtml(data.income_basis)} — ${escapeHtml(revision.review_note || '')}</p><table class="table table-sm"><tbody>${amounts}</tbody></table></details>`;
+                    }).join('');
+                    const actions = {review_submit: 'ارسال', review_approve: 'تأیید', review_return: 'بازگشت', review_revise: 'ایجاد اصلاحیه'};
+                    const events = (response.events || []).map(event => `<li>${escapeHtml(actions[event.action] || event.action)} — نسخه ${escapeHtml(event.revision)} — کاربر #${escapeHtml(event.actor_id)} — ${escapeHtml(event.created_at)}: ${escapeHtml(event.note || '')}</li>`).join('');
+                    $('#detailsModalBody').html((html || '<p>نسخه تأییدشده‌ای ثبت نشده است.</p>') + `<h6>سابقه بررسی</h6><ul>${events}</ul>`);
+                }).fail(xhr => $('#detailsModalBody').text(responseError(xhr)));
             });
 
             $(document).on('click', '.delete-btn', function () {
