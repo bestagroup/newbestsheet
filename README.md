@@ -31,6 +31,7 @@ php vendor/bin/phpunit --configuration phpunit.mysql.xml
 
 ## معماری و انتشار
 
+- [بازطراحی داشبورد v3.6.0](docs/RELEASE-v3.6.0.fa.md)
 - [گردش تأیید و نسخه اصلاحی صورت مالی v3.5.0](docs/RELEASE-v3.5.0.fa.md)
 - [استانداردسازی صورت‌های مالی و راهنمای ارتقای v3.4.0](docs/RELEASE-v3.4.0.fa.md)
 

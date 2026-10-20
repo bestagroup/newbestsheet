@@ -9,6 +9,15 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  dashboard-interactions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/Frontend/dashboard.test.cjs
   sqlite:
     runs-on: ubuntu-latest
     timeout-minutes: 15

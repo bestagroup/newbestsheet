@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.6.0 — 2026-10-20
+
+- Redesign the role-scoped dashboard with priority alerts, upcoming meetings, compact metrics, domain tabs and collapsible profile.
+- Add Persian/Arabic-aware local search, contiguous-phrase matching, record-kind filters and live result counts.
+- Retain local Chart.js with lazy rendering, keyboard-accessible RTL tabs, exact financial tooltips and accessible data-table fallback.
+- Add scoped responsive and dark-theme styles without changing reporting or financial approval semantics.
+- Add dependency-free JavaScript interaction regression checks to CI; no schema or dependency change.
+
 ## 3.5.0 — 2026-10-20
 
 - Introduce draft, submitted and approved financial review states, preserving legacy records as explicitly unreviewed.
