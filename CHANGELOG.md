@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.6.1 — 2026-11-25
+
+- Add a shared downloadable Pitch Deck PowerPoint template to the first displayed investment step in the profile.
+- Serve the original template as a static public asset, available regardless of the user's current investment stage or upload permissions.
+
 ## 3.6.0 — 2026-10-20
 
 - Redesign the role-scoped dashboard with priority alerts, upcoming meetings, compact metrics, domain tabs and collapsible profile.

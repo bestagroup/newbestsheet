@@ -68,6 +68,20 @@
                         <span class="badge bg-label-{{ $badgeClass }}">{{ $stateLabel }}</span>
                     </div>
 
+                    @if($loop->first)
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3 p-3 border rounded">
+                            <div>
+                                <div class="fw-semibold">قالب ارائه طرح سرمایه‌گذاری (Pitch Deck)</div>
+                                <div class="small text-muted mt-1">فایل پاورپوینت را دانلود و برای معرفی طرح خود تکمیل کنید.</div>
+                            </div>
+                            <a class="btn btn-outline-primary flex-shrink-0"
+                               href="{{ asset('downloads/investment/pitch-deck.pptx') }}"
+                               download="pitch-deck.pptx">
+                                <i class="mdi mdi-download me-1" aria-hidden="true"></i>دانلود قالب ارائه طرح
+                            </a>
+                        </div>
+                    @endif
+
                     @if($history)
                         <div class="d-flex flex-wrap gap-3 mt-3 small text-muted">
                             <span><i class="mdi mdi-calendar-check-outline me-1"></i>{{ $history->created_at ? jdate($history->created_at)->format('Y/m/d H:i') : '—' }}</span>
